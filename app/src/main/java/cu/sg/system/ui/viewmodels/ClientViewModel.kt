@@ -1,13 +1,18 @@
 package cu.sg.system.ui.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import cu.sg.system.data.local.entity.ClientDocumentEntity
+import cu.sg.system.data.local.entity.ClientNoteEntity
 import cu.sg.system.data.repository.ClientRepository
 import cu.sg.system.domain.model.Client
 import cu.sg.system.domain.model.Service
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 class ClientViewModel(
     private val clientRepository: ClientRepository
@@ -22,8 +27,17 @@ class ClientViewModel(
     private val _selectedClient = MutableStateFlow<Client?>(null)
     val selectedClient: StateFlow<Client?> = _selectedClient.asStateFlow()
     
+    private val _clientNotes = MutableStateFlow<List<ClientNoteEntity>>(emptyList())
+    val clientNotes: StateFlow<List<ClientNoteEntity>> = _clientNotes.asStateFlow()
+    
+    private val _clientDocuments = MutableStateFlow<List<ClientDocumentEntity>>(emptyList())
+    val clientDocuments: StateFlow<List<ClientDocumentEntity>> = _clientDocuments.asStateFlow()
+    
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
     
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -40,6 +54,19 @@ class ClientViewModel(
         }
     }
     
+    fun refreshClients() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                clientRepository.getAllClients().first()
+            } catch (e: Exception) {
+                _error.value = "Error al refrescar: ${e.message}"
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+    
     fun loadClientByUid(uid: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -50,6 +77,22 @@ class ClientViewModel(
                 _error.value = "Error al cargar el cliente: ${e.message}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+    
+    fun loadClientNotes(uid: String) {
+        viewModelScope.launch {
+            clientRepository.getNotesByClient(uid).collect { notes ->
+                _clientNotes.value = notes
+            }
+        }
+    }
+    
+    fun loadClientDocuments(uid: String) {
+        viewModelScope.launch {
+            clientRepository.getDocumentsByClient(uid).collect { docs ->
+                _clientDocuments.value = docs
             }
         }
     }
@@ -103,7 +146,6 @@ class ClientViewModel(
         }
     }
     
-    // NUEVO: Actualizar servicios del cliente
     fun updateClientServices(uid: String, services: List<Service>) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -119,7 +161,6 @@ class ClientViewModel(
         }
     }
     
-    // NUEVO: Eliminar un servicio del cliente
     fun removeServiceFromClient(uid: String, serviceId: Long) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -131,6 +172,69 @@ class ClientViewModel(
                 _error.value = "Error al eliminar servicio: ${e.message}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+    
+    fun addNote(clientUid: String, content: String) {
+        viewModelScope.launch {
+            try {
+                clientRepository.addNote(
+                    ClientNoteEntity(clientUid = clientUid, content = content)
+                )
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al agregar nota: ${e.message}"
+            }
+        }
+    }
+    
+    fun deleteNote(noteId: Long) {
+        viewModelScope.launch {
+            try {
+                clientRepository.deleteNote(noteId)
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar nota: ${e.message}"
+            }
+        }
+    }
+    
+    fun addDocument(clientUid: String, uri: Uri, context: Context) {
+        viewModelScope.launch {
+            try {
+                val fileName = "doc_${System.currentTimeMillis()}.pdf"
+                val file = File(context.getExternalFilesDir(null), "documents")
+                if (!file.exists()) file.mkdirs()
+                val destFile = File(file, fileName)
+                
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                clientRepository.addDocument(
+                    ClientDocumentEntity(
+                        clientUid = clientUid,
+                        fileName = fileName,
+                        filePath = destFile.absolutePath
+                    )
+                )
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al agregar documento: ${e.message}"
+            }
+        }
+    }
+    
+    fun deleteDocument(docId: Long) {
+        viewModelScope.launch {
+            try {
+                clientRepository.deleteDocument(docId)
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar documento: ${e.message}"
             }
         }
     }

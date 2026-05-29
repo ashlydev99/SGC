@@ -4,24 +4,25 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import cu.sg.system.data.local.dao.ClientDao
-import cu.sg.system.data.local.dao.ServiceDao
-import cu.sg.system.data.local.entity.ClientEntity
-import cu.sg.system.data.local.entity.ClientServiceCrossRef
-import cu.sg.system.data.local.entity.ServiceEntity
+import cu.sg.system.data.local.dao.*
+import cu.sg.system.data.local.entity.*
 
 @Database(
     entities = [
         ClientEntity::class,
         ServiceEntity::class,
-        ClientServiceCrossRef::class
+        ClientServiceCrossRef::class,
+        ClientNoteEntity::class,
+        ClientDocumentEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun clientDao(): ClientDao
     abstract fun serviceDao(): ServiceDao
+    abstract fun clientNoteDao(): ClientNoteDao
+    abstract fun clientDocumentDao(): ClientDocumentDao
     
     companion object {
         @Volatile
@@ -33,7 +34,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "sgc_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

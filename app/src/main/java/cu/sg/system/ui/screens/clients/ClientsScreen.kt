@@ -8,13 +8,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import cu.sg.system.domain.model.Client
+import cu.sg.system.ui.components.ShimmerCard
 import cu.sg.system.ui.navigation.Screen
+import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.ui.viewmodel.ClientViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,6 +27,8 @@ fun ClientsScreen(
     clientViewModel: ClientViewModel
 ) {
     val clients by clientViewModel.clients.collectAsState()
+    val isLoading by clientViewModel.isLoading.collectAsState()
+    val isRefreshing by clientViewModel.isRefreshing.collectAsState()
     
     Scaffold(
         topBar = {
@@ -50,33 +55,44 @@ fun ClientsScreen(
             )
         }
     ) { paddingValues ->
-        if (clients.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "No hay clientes registrados",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(clients, key = { it.uid }) { client ->
-                    ClientCard(
-                        client = client,
-                        onClick = {
-                            navController.navigate(Screen.ClientDetail.createRoute(client.uid))
-                        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (isLoading && clients.isEmpty()) {
+                // Mostrar shimmer mientras carga
+                ShimmerCard()
+            } else if (clients.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No hay clientes registrados",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                // Pull-to-refresh
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { clientViewModel.refreshClients() }
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(clients, key = { it.uid }) { client ->
+                            ClientCard(
+                                client = client,
+                                onClick = {
+                                    navController.navigate(Screen.ClientDetail.createRoute(client.uid))
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -96,46 +112,42 @@ fun ClientCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${client.firstName} ${client.lastName}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "UID: ${client.uid}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "CI: ${client.ci}",
+                    fontSize = 14.sp
+                )
+            }
+            
+            // Cantidad de servicios
+            Surface(
+                color = BlueElectric.copy(alpha = 0.15f),
+                shape = MaterialTheme.shapes.small
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "${client.firstName} ${client.lastName}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "UID: ${client.uid}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "CI: ${client.ci}",
-                        fontSize = 14.sp
-                    )
-                }
-                
-                // Mostrar cantidad de servicios
-                Surface(
-                    color = cu.sg.system.ui.theme.BlueElectric.copy(alpha = 0.15f),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = "${client.services.size} serv.",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = cu.sg.system.ui.theme.BlueElectric
-                    )
-                }
+                Text(
+                    text = "${client.services.size} serv.",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = BlueElectric
+                )
             }
         }
     }

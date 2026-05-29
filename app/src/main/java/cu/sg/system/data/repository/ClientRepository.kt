@@ -1,7 +1,11 @@
 package cu.sg.system.data.repository
 
 import cu.sg.system.data.local.dao.ClientDao
+import cu.sg.system.data.local.dao.ClientDocumentDao
+import cu.sg.system.data.local.dao.ClientNoteDao
+import cu.sg.system.data.local.entity.ClientDocumentEntity
 import cu.sg.system.data.local.entity.ClientEntity
+import cu.sg.system.data.local.entity.ClientNoteEntity
 import cu.sg.system.data.local.entity.ClientServiceCrossRef
 import cu.sg.system.data.local.entity.ClientWithServices
 import cu.sg.system.domain.model.Client
@@ -9,7 +13,11 @@ import cu.sg.system.domain.model.Service
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class ClientRepository(private val clientDao: ClientDao) {
+class ClientRepository(
+    private val clientDao: ClientDao,
+    private val clientNoteDao: ClientNoteDao? = null,
+    private val clientDocumentDao: ClientDocumentDao? = null
+) {
     
     fun getAllClients(): Flow<List<Client>> {
         return clientDao.getAllClientsWithServices().map { list ->
@@ -48,7 +56,6 @@ class ClientRepository(private val clientDao: ClientDao) {
         }
     }
     
-    // NUEVO: Actualizar servicios del cliente
     suspend fun updateClientServices(uid: String, services: List<Service>) {
         clientDao.deleteAllServicesFromClient(uid)
         services.forEach { service ->
@@ -63,7 +70,6 @@ class ClientRepository(private val clientDao: ClientDao) {
         }
     }
     
-    // NUEVO: Eliminar un servicio específico del cliente
     suspend fun removeServiceFromClient(uid: String, serviceId: Long) {
         clientDao.deleteClientServiceCrossRef(
             ClientServiceCrossRef(
@@ -96,6 +102,34 @@ class ClientRepository(private val clientDao: ClientDao) {
                 createdAt = entity.createdAt
             )
         }
+    }
+    
+    // Notas
+    fun getNotesByClient(uid: String): Flow<List<ClientNoteEntity>> {
+        return clientNoteDao?.getNotesByClient(uid) ?: kotlinx.coroutines.flow.emptyFlow()
+    }
+    
+    suspend fun addNote(note: ClientNoteEntity) {
+        clientNoteDao?.insertNote(note)
+    }
+    
+    suspend fun deleteNote(noteId: Long) {
+        clientNoteDao?.deleteNote(ClientNoteEntity(id = noteId, clientUid = "", content = ""))
+    }
+    
+    // Documentos
+    fun getDocumentsByClient(uid: String): Flow<List<ClientDocumentEntity>> {
+        return clientDocumentDao?.getDocumentsByClient(uid) ?: kotlinx.coroutines.flow.emptyFlow()
+    }
+    
+    suspend fun addDocument(document: ClientDocumentEntity) {
+        clientDocumentDao?.insertDocument(document)
+    }
+    
+    suspend fun deleteDocument(docId: Long) {
+        clientDocumentDao?.deleteDocument(
+            ClientDocumentEntity(id = docId, clientUid = "", fileName = "", filePath = "")
+        )
     }
     
     private fun ClientWithServices.toDomainModel(): Client {

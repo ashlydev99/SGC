@@ -21,7 +21,9 @@ class MainActivity : ComponentActivity() {
         
         val application = application as SGCApplication
         val clientRepository = ClientRepository(
-            application.database.clientDao()
+            clientDao = application.database.clientDao(),
+            clientNoteDao = application.database.clientNoteDao(),
+            clientDocumentDao = application.database.clientDocumentDao()
         )
         val serviceRepository = ServiceRepository(
             application.database.serviceDao()

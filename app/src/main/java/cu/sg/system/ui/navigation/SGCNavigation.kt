@@ -30,6 +30,8 @@ import cu.sg.system.ui.screens.profile.SettingsScreen
 import cu.sg.system.ui.screens.search.SearchScreen
 import cu.sg.system.ui.screens.services.AddServiceScreen
 import cu.sg.system.ui.screens.services.ServicesScreen
+import cu.sg.system.ui.screens.settings.BackupRestoreScreen
+import cu.sg.system.ui.screens.settings.ImportExportScreen
 import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.ui.viewmodel.ClientViewModel
 import cu.sg.system.ui.viewmodel.ProfileViewModel
@@ -196,6 +198,14 @@ fun SGCNavigation(
                     navController = navController,
                     profileViewModel = profileViewModel
                 )
+            }
+            
+            composable(Screen.BackupRestore.route) {
+                BackupRestoreScreen(navController = navController)
+            }
+            
+            composable(Screen.ImportExport.route) {
+                ImportExportScreen(navController = navController)
             }
         }
     }
