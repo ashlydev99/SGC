@@ -1,6 +1,5 @@
 package cu.sg.system.ui.screens.settings
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -17,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import cu.sg.system.data.local.AppDatabase
+import cu.sg.system.data.local.entity.ClientEntity
+import cu.sg.system.data.local.entity.ServiceEntity
 import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.util.CsvManager
 import kotlinx.coroutines.Dispatchers
@@ -37,9 +37,18 @@ fun ImportExportScreen(navController: NavController) {
         uri?.let {
             scope.launch {
                 withContext(Dispatchers.IO) {
-                    val clients = database.clientDao().getAllClientsForExport()
-                    context.contentResolver.openOutputStream(uri)?.let { outputStream ->
-                        csvManager.exportClients(clients, outputStream)
+                    try {
+                        val clients: List<ClientEntity> = database.clientDao().getAllClientsForExport()
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            csvManager.exportClients(clients, outputStream)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Clientes exportados correctamente", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -52,9 +61,18 @@ fun ImportExportScreen(navController: NavController) {
         uri?.let {
             scope.launch {
                 withContext(Dispatchers.IO) {
-                    val services = database.serviceDao().getAllServicesForExport()
-                    context.contentResolver.openOutputStream(uri)?.let { outputStream ->
-                        csvManager.exportServices(services, outputStream)
+                    try {
+                        val services: List<ServiceEntity> = database.serviceDao().getAllServicesForExport()
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            csvManager.exportServices(services, outputStream)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Servicios exportados correctamente", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -67,13 +85,19 @@ fun ImportExportScreen(navController: NavController) {
         uri?.let {
             scope.launch {
                 withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.let { inputStream ->
-                        val clients = csvManager.importClients(inputStream)
-                        clients.forEach { client ->
-                            database.clientDao().insertClient(client)
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            val clients: List<ClientEntity> = csvManager.importClients(inputStream)
+                            for (client in clients) {
+                                database.clientDao().insertClient(client)
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "${clients.size} clientes importados", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "${clients.size} clientes importados", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -87,13 +111,19 @@ fun ImportExportScreen(navController: NavController) {
         uri?.let {
             scope.launch {
                 withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.let { inputStream ->
-                        val services = csvManager.importServices(inputStream)
-                        services.forEach { service ->
-                            database.serviceDao().insertService(service)
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            val services: List<ServiceEntity> = csvManager.importServices(inputStream)
+                            for (service in services) {
+                                database.serviceDao().insertService(service)
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "${services.size} servicios importados", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "${services.size} servicios importados", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
