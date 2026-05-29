@@ -204,6 +204,7 @@ fun ClientDetailScreen(
                                 clientData.services.forEach { service ->
                                     ServiceCardWithActions(
                                         service = service,
+                                        clientStatus = clientData.status,
                                         clientUid = uid,
                                         clientViewModel = clientViewModel
                                     )
@@ -271,10 +272,19 @@ fun ClientDetailScreen(
 @Composable
 fun ServiceCardWithActions(
     service: Service,
+    clientStatus: String,
     clientUid: String,
     clientViewModel: ClientViewModel
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    // Determinar el estado del servicio basado en el estado del cliente
+    val serviceStatus = when (clientStatus) {
+        "En trámite" -> "En trámite"
+        "Pendiente a pagar" -> "Pendiente a pagar"
+        "Trámite finalizado y Entregado" -> "Entregado"
+        else -> clientStatus
+    }
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -302,6 +312,20 @@ fun ServiceCardWithActions(
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // ESTADO DEL SERVICIO
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Estado:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        ServiceStatusBadge(status = serviceStatus)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "$${String.format("%.2f", service.price)}",
                         fontSize = 16.sp,
@@ -309,42 +333,57 @@ fun ServiceCardWithActions(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                
-                // Estado del servicio
-                StatusBadge(status = "Activo")
             }
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Botones de acción
+            // Botones de acción según el estado
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón Finalizar
-                SmallButton(
-                    text = "Finalizar",
-                    color = StatusPendiente,
-                    onClick = {
-                        clientViewModel.updateClientStatus(clientUid, "Pendiente a pagar")
+                when (clientStatus) {
+                    "En trámite" -> {
+                        // Botón Resuelto
+                        SmallButton(
+                            text = "Resuelto",
+                            color = StatusPendiente,
+                            onClick = {
+                                clientViewModel.updateClientStatus(clientUid, "Pendiente a pagar")
+                            }
+                        )
+                        // Botón Eliminar
+                        SmallButton(
+                            text = "Eliminar",
+                            color = MaterialTheme.colorScheme.error,
+                            onClick = { showDeleteDialog = true }
+                        )
                     }
-                )
-                
-                // Botón Pagado
-                SmallButton(
-                    text = "Pagado",
-                    color = StatusSolucionado,
-                    onClick = {
-                        clientViewModel.updateClientStatus(clientUid, "Solucionado")
+                    "Pendiente a pagar" -> {
+                        // Botón Pagado
+                        SmallButton(
+                            text = "Pagado",
+                            color = StatusSolucionado,
+                            onClick = {
+                                clientViewModel.updateClientStatus(clientUid, "Trámite finalizado y Entregado")
+                            }
+                        )
+                        // Botón Eliminar
+                        SmallButton(
+                            text = "Eliminar",
+                            color = MaterialTheme.colorScheme.error,
+                            onClick = { showDeleteDialog = true }
+                        )
                     }
-                )
-                
-                // Botón Eliminar servicio
-                SmallButton(
-                    text = "Eliminar",
-                    color = MaterialTheme.colorScheme.error,
-                    onClick = { showDeleteDialog = true }
-                )
+                    "Trámite finalizado y Entregado" -> {
+                        // Solo mostrar Eliminar
+                        SmallButton(
+                            text = "Eliminar",
+                            color = MaterialTheme.colorScheme.error,
+                            onClick = { showDeleteDialog = true }
+                        )
+                    }
+                }
             }
         }
     }
@@ -370,6 +409,30 @@ fun ServiceCardWithActions(
                     Text("Cancelar")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun ServiceStatusBadge(status: String) {
+    val (backgroundColor, textColor) = when (status) {
+        "En trámite" -> Pair(StatusTramite, androidx.compose.ui.graphics.Color.White)
+        "Pendiente a pagar" -> Pair(StatusPendiente, androidx.compose.ui.graphics.Color.White)
+        "Entregado" -> Pair(StatusSolucionado, androidx.compose.ui.graphics.Color.White)
+        "Trámite finalizado y Entregado" -> Pair(StatusSolucionado, androidx.compose.ui.graphics.Color.White)
+        else -> Pair(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    
+    Surface(
+        color = backgroundColor,
+        shape = MaterialTheme.shapes.small
+    ) {
+        Text(
+            text = status,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            color = textColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }

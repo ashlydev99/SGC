@@ -99,59 +99,44 @@ fun ClientCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "${client.firstName} ${client.lastName}",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "UID: ${client.uid}",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "CI: ${client.ci}",
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            StatusBadge(status = client.status)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "${client.firstName} ${client.lastName}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "UID: ${client.uid}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "CI: ${client.ci}",
+                        fontSize = 14.sp
+                    )
+                }
+                
+                // Mostrar cantidad de servicios
+                Surface(
+                    color = cu.sg.system.ui.theme.BlueElectric.copy(alpha = 0.15f),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = "${client.services.size} serv.",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = cu.sg.system.ui.theme.BlueElectric
+                    )
+                }
+            }
         }
-    }
-}
-
-@Composable
-fun StatusBadge(status: String) {
-    val (backgroundColor, textColor) = when (status) {
-        "En trámite" -> Pair(
-            cu.sg.system.ui.theme.StatusTramite,
-            androidx.compose.ui.graphics.Color.White
-        )
-        "Pendiente a pagar" -> Pair(
-            cu.sg.system.ui.theme.StatusPendiente,
-            androidx.compose.ui.graphics.Color.White
-        )
-        "Solucionado" -> Pair(
-            cu.sg.system.ui.theme.StatusSolucionado,
-            androidx.compose.ui.graphics.Color.White
-        )
-        else -> Pair(
-            MaterialTheme.colorScheme.surfaceVariant,
-            MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-    
-    Surface(
-        color = backgroundColor,
-        shape = MaterialTheme.shapes.small
-    ) {
-        Text(
-            text = status,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            color = textColor,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        )
     }
 }
