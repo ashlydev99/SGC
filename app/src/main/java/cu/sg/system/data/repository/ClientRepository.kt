@@ -48,6 +48,31 @@ class ClientRepository(private val clientDao: ClientDao) {
         }
     }
     
+    // NUEVO: Actualizar servicios del cliente
+    suspend fun updateClientServices(uid: String, services: List<Service>) {
+        clientDao.deleteAllServicesFromClient(uid)
+        services.forEach { service ->
+            if (service.id > 0) {
+                clientDao.insertClientServiceCrossRef(
+                    ClientServiceCrossRef(
+                        clientUid = uid,
+                        serviceId = service.id
+                    )
+                )
+            }
+        }
+    }
+    
+    // NUEVO: Eliminar un servicio específico del cliente
+    suspend fun removeServiceFromClient(uid: String, serviceId: Long) {
+        clientDao.deleteClientServiceCrossRef(
+            ClientServiceCrossRef(
+                clientUid = uid,
+                serviceId = serviceId
+            )
+        )
+    }
+    
     suspend fun deleteClient(uid: String) {
         val client = clientDao.getClient(uid)
         client?.let {

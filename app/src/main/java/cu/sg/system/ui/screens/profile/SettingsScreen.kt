@@ -274,7 +274,7 @@ fun SettingsScreen(
         )
     }
     
-    // Diálogo de información
+    // Diálogo de información - CORREGIDO
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
@@ -295,12 +295,12 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     InfoRow("Versión", "1.0.0")
-                    InfoRow("Desarrollador", "SGC Team")
+                    InfoRow("Desarrollador", "Ashly Castell")
                     InfoRow("Paquete", "cu.sg.system")
                     InfoRow("Android Mínimo", "7.0 (API 24)")
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "© 2024 SGC. Todos los derechos reservados.",
+                        text = "© 2026 SGC. Todos los derechos reservados.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

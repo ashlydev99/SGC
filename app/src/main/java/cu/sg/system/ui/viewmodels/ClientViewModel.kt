@@ -103,6 +103,38 @@ class ClientViewModel(
         }
     }
     
+    // NUEVO: Actualizar servicios del cliente
+    fun updateClientServices(uid: String, services: List<Service>) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                clientRepository.updateClientServices(uid, services)
+                loadClientByUid(uid)
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al actualizar servicios: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    // NUEVO: Eliminar un servicio del cliente
+    fun removeServiceFromClient(uid: String, serviceId: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                clientRepository.removeServiceFromClient(uid, serviceId)
+                loadClientByUid(uid)
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar servicio: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
     fun searchClients(query: String) {
         viewModelScope.launch {
             _isLoading.value = true

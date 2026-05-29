@@ -41,6 +41,9 @@ fun AddClientScreen(
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     
+    // Calcular precio total
+    val totalPrice = selectedServices.sumOf { it.price }
+    
     // Observar errores
     LaunchedEffect(error) {
         error?.let {
@@ -202,16 +205,27 @@ fun AddClientScreen(
                                     .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = service.name,
-                                    fontSize = 14.sp
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = service.name,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = service.type,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Text(
                                     text = "$${String.format("%.2f", service.price)}",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+                            }
+                            if (selectedServices.last() != service) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             }
                         }
                     }
@@ -230,19 +244,21 @@ fun AddClientScreen(
                 }
             }
             
-            // Precio Total
+            // Precio Total - CORREGIDO
             if (selectedServices.isNotEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                        containerColor = BlueElectric.copy(alpha = 0.1f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Precio Total:",
@@ -250,10 +266,10 @@ fun AddClientScreen(
                             fontSize = 16.sp
                         )
                         Text(
-                            text = "$${String.format("%.2f", selectedServices.sumOf { it.price })}",
+                            text = "$${String.format("%.2f", totalPrice)}",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            fontSize = 20.sp,
+                            color = BlueElectric
                         )
                     }
                 }

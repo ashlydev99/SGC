@@ -3,9 +3,8 @@ package cu.sg.system.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MiscellaneousServices
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,6 +30,7 @@ import cu.sg.system.ui.screens.profile.SettingsScreen
 import cu.sg.system.ui.screens.search.SearchScreen
 import cu.sg.system.ui.screens.services.AddServiceScreen
 import cu.sg.system.ui.screens.services.ServicesScreen
+import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.ui.viewmodel.ClientViewModel
 import cu.sg.system.ui.viewmodel.ProfileViewModel
 import cu.sg.system.ui.viewmodel.ServiceViewModel
@@ -63,8 +63,8 @@ fun SGCNavigation(
     val bottomNavItems = listOf(
         BottomNavItem(Screen.Home, Icons.Default.Home, "Inicio"),
         BottomNavItem(Screen.Clients, Icons.Default.Person, "Usuarios"),
-        BottomNavItem(Screen.Services, Icons.Default.Star, "Servicios"),
-        BottomNavItem(Screen.Profile, Icons.Default.Settings, "Perfíl")
+        BottomNavItem(Screen.Services, Icons.Default.MiscellaneousServices, "Servicios"),
+        BottomNavItem(Screen.Profile, Icons.Default.Person, "Perfíl")
     )
     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -75,14 +75,30 @@ fun SGCNavigation(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = BlueElectric
+                ) {
                     bottomNavItems.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { 
+                            it.route == item.screen.route 
+                        } == true
+                        
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            selected = currentDestination?.hierarchy?.any { 
-                                it.route == item.screen.route 
-                            } == true,
+                            icon = { 
+                                Icon(
+                                    item.icon, 
+                                    contentDescription = item.label,
+                                    tint = if (selected) BlueElectric else MaterialTheme.colorScheme.onSurfaceVariant
+                                ) 
+                            },
+                            label = { 
+                                Text(
+                                    item.label,
+                                    color = if (selected) BlueElectric else MaterialTheme.colorScheme.onSurfaceVariant
+                                ) 
+                            },
+                            selected = selected,
                             onClick = {
                                 navController.navigate(item.screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -91,7 +107,14 @@ fun SGCNavigation(
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = BlueElectric,
+                                selectedTextColor = BlueElectric,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = BlueElectric.copy(alpha = 0.15f)
+                            )
                         )
                     }
                 }
@@ -149,6 +172,7 @@ fun SGCNavigation(
                 ClientDetailScreen(
                     navController = navController,
                     clientViewModel = clientViewModel,
+                    serviceViewModel = serviceViewModel,
                     uid = uid
                 )
             }

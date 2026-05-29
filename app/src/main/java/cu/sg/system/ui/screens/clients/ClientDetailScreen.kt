@@ -5,8 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,18 +15,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import cu.sg.system.domain.model.Client
+import cu.sg.system.domain.model.Service
 import cu.sg.system.ui.theme.*
 import cu.sg.system.ui.viewmodel.ClientViewModel
+import cu.sg.system.ui.viewmodel.ServiceViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientDetailScreen(
     navController: NavController,
     clientViewModel: ClientViewModel,
+    serviceViewModel: ServiceViewModel,
     uid: String
 ) {
     val client by clientViewModel.selectedClient.collectAsState()
+    val allServices by serviceViewModel.services.collectAsState()
     val isLoading by clientViewModel.isLoading.collectAsState()
+    var showAddServiceDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(uid) {
         clientViewModel.loadClientByUid(uid)
@@ -88,26 +92,32 @@ fun ClientDetailScreen(
                         .fillMaxSize()
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // UID
+                    // UID - Tarjeta compacta
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = BlueElectric.copy(alpha = 0.1f)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
-                                text = "UID",
+                                text = "UID:",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = clientData.uid,
-                                fontSize = 18.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BlueElectric
                             )
@@ -149,68 +159,6 @@ fun ClientDetailScreen(
                         }
                     }
                     
-                    // Estado
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = "Estado",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
-                            
-                            StatusBadge(status = clientData.status)
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            // Botones de cambio de estado
-                            when (clientData.status) {
-                                "En trámite" -> {
-                                    Button(
-                                        onClick = {
-                                            clientViewModel.updateClientStatus(uid, "Pendiente a pagar")
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = StatusPendiente
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Marcar como Finalizado",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                                "Pendiente a pagar" -> {
-                                    Button(
-                                        onClick = {
-                                            clientViewModel.updateClientStatus(uid, "Solucionado")
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = StatusSolucionado
-                                        ),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Marcar como Pagado",
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
                     // Servicios
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -223,62 +171,69 @@ fun ClientDetailScreen(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = "Servicios",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Servicios",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                                IconButton(
+                                    onClick = { showAddServiceDialog = true },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Agregar servicio",
+                                        tint = BlueElectric
+                                    )
+                                }
+                            }
                             
                             if (clientData.services.isEmpty()) {
                                 Text(
-                                    text = "No hay servicios asignados",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = "Cliente sin servicios activos",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(vertical = 8.dp)
                                 )
                             } else {
                                 clientData.services.forEach { service ->
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surface
-                                        )
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(12.dp)
-                                        ) {
-                                            Text(
-                                                text = service.name,
-                                                fontWeight = FontWeight.Medium,
-                                                fontSize = 16.sp
-                                            )
-                                            Text(
-                                                text = "Tipo: ${service.type}",
-                                                fontSize = 14.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = "$${String.format("%.2f", service.price)}",
-                                                fontSize = 16.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
+                                    ServiceCardWithActions(
+                                        service = service,
+                                        clientUid = uid,
+                                        clientViewModel = clientViewModel
+                                    )
                                 }
-                                
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                // Precio Total
-                                Text(
-                                    text = "Total: $${String.format("%.2f", clientData.services.sumOf { it.price })}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                            }
+                            
+                            // Total
+                            if (clientData.services.isNotEmpty()) {
+                                HorizontalDivider()
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Total",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                    Text(
+                                        text = "$${String.format("%.2f", clientData.services.sumOf { it.price })}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = BlueElectric
+                                    )
+                                }
                             }
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             } ?: run {
                 Box(
@@ -292,6 +247,214 @@ fun ClientDetailScreen(
             }
         }
     }
+    
+    // Diálogo para agregar servicio
+    if (showAddServiceDialog) {
+        val availableServices = allServices.filter { service ->
+            client?.services?.none { it.id == service.id } ?: true
+        }
+        
+        AddServiceToClientDialog(
+            services = availableServices,
+            onDismiss = { showAddServiceDialog = false },
+            onAdd = { service ->
+                client?.let {
+                    val updatedServices = it.services + service
+                    clientViewModel.updateClientServices(uid, updatedServices)
+                }
+                showAddServiceDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ServiceCardWithActions(
+    service: Service,
+    clientUid: String,
+    clientViewModel: ClientViewModel
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = service.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = "Tipo: ${service.type}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$${String.format("%.2f", service.price)}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                // Estado del servicio
+                StatusBadge(status = "Activo")
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Botones de acción
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Botón Finalizar
+                SmallButton(
+                    text = "Finalizar",
+                    color = StatusPendiente,
+                    onClick = {
+                        clientViewModel.updateClientStatus(clientUid, "Pendiente a pagar")
+                    }
+                )
+                
+                // Botón Pagado
+                SmallButton(
+                    text = "Pagado",
+                    color = StatusSolucionado,
+                    onClick = {
+                        clientViewModel.updateClientStatus(clientUid, "Solucionado")
+                    }
+                )
+                
+                // Botón Eliminar servicio
+                SmallButton(
+                    text = "Eliminar",
+                    color = MaterialTheme.colorScheme.error,
+                    onClick = { showDeleteDialog = true }
+                )
+            }
+        }
+    }
+    
+    // Diálogo de confirmación para eliminar servicio
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Eliminar Servicio") },
+            text = { Text("¿Estás seguro de eliminar este servicio del cliente?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        clientViewModel.removeServiceFromClient(clientUid, service.id)
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun SmallButton(
+    text: String,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.height(32.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        shape = RoundedCornerShape(6.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun AddServiceToClientDialog(
+    services: List<Service>,
+    onDismiss: () -> Unit,
+    onAdd: (Service) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Agregar Servicio") },
+        text = {
+            if (services.isEmpty()) {
+                Text("No hay servicios disponibles para agregar")
+            } else {
+                Column {
+                    services.forEach { service ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = service.name,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "$${String.format("%.2f", service.price)}",
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(onClick = { onAdd(service) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Agregar",
+                                        tint = BlueElectric
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        }
+    )
 }
 
 @Composable

@@ -8,34 +8,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import cu.sg.system.data.local.UserPreferences
+import cu.sg.system.data.repository.ClientRepository
+import cu.sg.system.data.repository.ServiceRepository
 import cu.sg.system.ui.navigation.SGCNavigation
 import cu.sg.system.ui.theme.SGCTheme
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
-        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Controlar el tiempo del splash
-        splashScreen.setKeepOnScreenCondition {
-            // Mantener el splash hasta que pasen 2 segundos
-            val startTime = System.currentTimeMillis()
-            while (System.currentTimeMillis() - startTime < 2000) {
-                // Esperar
-            }
-            false
-        }
-        
         val application = application as SGCApplication
-        val clientRepository = cu.sg.system.data.repository.ClientRepository(
+        val clientRepository = ClientRepository(
             application.database.clientDao()
         )
-        val serviceRepository = cu.sg.system.data.repository.ServiceRepository(
+        val serviceRepository = ServiceRepository(
             application.database.serviceDao()
         )
         val userPreferences = application.userPreferences

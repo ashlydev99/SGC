@@ -73,22 +73,22 @@ fun ProfileScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            // Foto de perfil circular
+            // Foto de perfil circular - MÁS PEQUEÑA
             Image(
                 painter = painterResource(id = R.drawable.ic_default_profile),
                 contentDescription = "Foto de perfil",
                 modifier = Modifier
-                    .size(150.dp)
+                    .size(100.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            // Nombre de usuario editable
+            // Nombre de usuario editable - MÁS COMPACTO
             if (isEditing.value) {
                 OutlinedTextField(
                     value = editedName.value,
@@ -101,9 +101,9 @@ fun ProfileScreen(
                         cursorColor = BlueElectric
                     )
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
                         onClick = {
@@ -137,20 +137,20 @@ fun ProfileScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(
                                 text = "Nombre de usuario",
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = userName,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -165,6 +165,7 @@ fun ProfileScreen(
                 }
             }
             
+            // Espacio flexible para empujar el botón hacia abajo
             Spacer(modifier = Modifier.weight(1f))
             
             // Botón de salir
