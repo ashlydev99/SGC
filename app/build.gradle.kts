@@ -92,7 +92,7 @@ dependencies {
     // Shimmer effect
     implementation("com.valentinilk.shimmer:compose-shimmer:1.2.0")
     
-    // Pull to refresh
+    // Pull to refresh (Material)
     implementation("androidx.compose.material:material:1.6.1")
     
     // OpenCSV para importar/exportar CSV
