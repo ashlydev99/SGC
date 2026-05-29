@@ -31,13 +31,13 @@ fun ImportExportScreen(navController: NavController) {
     val csvManager = remember { CsvManager(context) }
     val scope = rememberCoroutineScope()
     
-    val exportLauncher = rememberLauncherForActivityResult(
+    val exportClientsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
         uri?.let {
             scope.launch {
                 withContext(Dispatchers.IO) {
-                    val clients = database.clientDao().getAllClients()
+                    val clients = database.clientDao().getAllClientsForExport()
                     context.contentResolver.openOutputStream(uri)?.let { outputStream ->
                         csvManager.exportClients(clients, outputStream)
                     }
@@ -46,7 +46,22 @@ fun ImportExportScreen(navController: NavController) {
         }
     }
     
-    val importLauncher = rememberLauncherForActivityResult(
+    val exportServicesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    val services = database.serviceDao().getAllServicesForExport()
+                    context.contentResolver.openOutputStream(uri)?.let { outputStream ->
+                        csvManager.exportServices(services, outputStream)
+                    }
+                }
+            }
+        }
+    }
+    
+    val importClientsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
@@ -56,6 +71,29 @@ fun ImportExportScreen(navController: NavController) {
                         val clients = csvManager.importClients(inputStream)
                         clients.forEach { client ->
                             database.clientDao().insertClient(client)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "${clients.size} clientes importados", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    val importServicesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.let { inputStream ->
+                        val services = csvManager.importServices(inputStream)
+                        services.forEach { service ->
+                            database.serviceDao().insertService(service)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "${services.size} servicios importados", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -80,14 +118,17 @@ fun ImportExportScreen(navController: NavController) {
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Clientes", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
-                    onClick = { exportLauncher.launch("clientes_sgc.csv") },
+                    onClick = { exportClientsLauncher.launch("clientes_sgc.csv") },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BlueElectric)
                 ) {
@@ -97,7 +138,7 @@ fun ImportExportScreen(navController: NavController) {
                 }
                 
                 Button(
-                    onClick = { importLauncher.launch("text/*") },
+                    onClick = { importClientsLauncher.launch("text/*") },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
@@ -113,14 +154,7 @@ fun ImportExportScreen(navController: NavController) {
             
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
-                    onClick = {
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                val services = database.serviceDao().getAllServicesOnce()
-                                exportLauncher.launch("servicios_sgc.csv")
-                            }
-                        }
-                    },
+                    onClick = { exportServicesLauncher.launch("servicios_sgc.csv") },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BlueElectric)
                 ) {
@@ -130,7 +164,7 @@ fun ImportExportScreen(navController: NavController) {
                 }
                 
                 Button(
-                    onClick = { importLauncher.launch("text/*") },
+                    onClick = { importServicesLauncher.launch("text/*") },
                     modifier = Modifier.weight(1f).height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {

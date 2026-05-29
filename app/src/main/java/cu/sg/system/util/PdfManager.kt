@@ -1,8 +1,7 @@
 package cu.sg.system.util
 
 import android.content.Context
-import android.net.Uri
-import android.os.Environment
+import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Paragraph
@@ -20,7 +19,8 @@ class PdfManager(private val context: Context) {
             val pdfFile = File(pdfDir, "Cliente_${client.uid}.pdf")
             
             val writer = PdfWriter(FileOutputStream(pdfFile))
-            val document = Document(writer)
+            val pdfDocument = PdfDocument(writer)
+            val document = Document(pdfDocument)
             
             document.add(Paragraph("FICHA DE CLIENTE").setBold().setFontSize(18f))
             document.add(Paragraph("\n"))

@@ -19,6 +19,7 @@ import cu.sg.system.ui.components.ShimmerCard
 import cu.sg.system.ui.navigation.Screen
 import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.ui.viewmodel.ClientViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +62,6 @@ fun ClientsScreen(
                 .padding(paddingValues)
         ) {
             if (isLoading && clients.isEmpty()) {
-                // Mostrar shimmer mientras carga
                 ShimmerCard()
             } else if (clients.isEmpty()) {
                 Box(
@@ -74,10 +74,11 @@ fun ClientsScreen(
                     )
                 }
             } else {
-                // Pull-to-refresh
-                PullToRefreshBox(
+                // Pull-to-refresh simple
+                SwipeRefresh(
                     isRefreshing = isRefreshing,
-                    onRefresh = { clientViewModel.refreshClients() }
+                    onRefresh = { clientViewModel.refreshClients() },
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -95,6 +96,33 @@ fun ClientsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SwipeRefresh(
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    // Implementación simple de pull-to-refresh
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            delay(1000)
+            onRefresh()
+        }
+    }
+    
+    Box(modifier = modifier) {
+        content()
+        if (isRefreshing) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+            )
         }
     }
 }

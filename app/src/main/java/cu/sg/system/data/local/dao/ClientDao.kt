@@ -19,6 +19,9 @@ interface ClientDao {
     @Query("SELECT * FROM clients WHERE uid = :uid")
     suspend fun getClient(uid: String): ClientEntity?
     
+    @Query("SELECT * FROM clients ORDER BY createdAt DESC")
+    suspend fun getAllClientsForExport(): List<ClientEntity>
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertClient(client: ClientEntity)
     
@@ -39,4 +42,7 @@ interface ClientDao {
     
     @Query("SELECT * FROM clients WHERE uid LIKE '%' || :query || '%' OR firstName LIKE '%' || :query || '%' OR lastName LIKE '%' || :query || '%'")
     suspend fun searchClients(query: String): List<ClientEntity>
+    
+    @Query("SELECT * FROM clients")
+    suspend fun getAllClients(): List<ClientEntity>
 }

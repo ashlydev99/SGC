@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import cu.sg.system.domain.model.Client
 import cu.sg.system.ui.navigation.Screen
-import cu.sg.system.ui.screens.clients.StatusBadge
+import cu.sg.system.ui.screens.clients.ServiceStatusBadge
 import cu.sg.system.ui.theme.BlueElectric
 import cu.sg.system.ui.viewmodel.ClientViewModel
 
@@ -199,7 +199,8 @@ fun SearchResultCard(
                     fontSize = 14.sp
                 )
             }
-            StatusBadge(status = client.status)
+            // Badge de estado del cliente
+            ServiceStatusBadge(status = client.status)
         }
     }
 }

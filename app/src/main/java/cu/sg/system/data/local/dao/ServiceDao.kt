@@ -12,6 +12,9 @@ interface ServiceDao {
     @Query("SELECT * FROM services WHERE id = :id")
     suspend fun getServiceById(id: Long): ServiceEntity?
     
+    @Query("SELECT * FROM services ORDER BY name ASC")
+    suspend fun getAllServicesForExport(): List<ServiceEntity>
+    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertService(service: ServiceEntity): Long
     
