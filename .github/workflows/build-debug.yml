@@ -1,0 +1,96 @@
+name: Build Debug APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de compilación'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build:
+    name: Compilar APK Debug
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+      
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      
+      - name: Hacer ejecutable gradlew
+        run: chmod +x gradlew
+      
+      - name: Descargar Gradle Wrapper JAR
+        run: |
+          GRADLE_VERSION="8.5"
+          WRAPPER_DIR="gradle/wrapper"
+          mkdir -p $WRAPPER_DIR
+          
+          echo "Descargando gradle-wrapper.jar versión $GRADLE_VERSION..."
+          curl -L -o $WRAPPER_DIR/gradle-wrapper.jar \
+            "https://github.com/gradle/gradle/raw/v$GRADLE_VERSION/gradle/wrapper/gradle-wrapper.jar"
+          
+          echo "Verificando descarga..."
+          if [ -f "$WRAPPER_DIR/gradle-wrapper.jar" ]; then
+            echo "✅ gradle-wrapper.jar descargado correctamente"
+            ls -la $WRAPPER_DIR/gradle-wrapper.jar
+          else
+            echo "❌ Error al descargar gradle-wrapper.jar"
+            exit 1
+          fi
+      
+      - name: Verificar estructura del proyecto
+        run: |
+          echo "=== Estructura del proyecto ==="
+          ls -la
+          echo "=== Gradle wrapper ==="
+          ls -la gradle/wrapper/
+          echo "=== App module ==="
+          ls -la app/
+      
+      - name: Compilar APK Debug
+        run: |
+          echo "Iniciando compilación debug..."
+          ./gradlew assembleDebug --stacktrace --info
+      
+      - name: Verificar APK generado
+        run: |
+          echo "=== Buscando APK generado ==="
+          find app/build -name "*.apk" -type f
+          
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "✅ APK Debug generado correctamente"
+            ls -la app/build/outputs/apk/debug/
+          else
+            echo "❌ APK Debug no encontrado"
+            exit 1
+          fi
+      
+      - name: Subir APK Debug como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: SGC-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          compression-level: 6
+      
+      - name: Mostrar información del build
+        run: |
+          echo "========================================="
+          echo "  COMPILACIÓN COMPLETADA EXITOSAMENTE"
+          echo "========================================="
+          echo "Fecha: $(date)"
+          echo "Build type: Debug"
+          echo "APK: app/build/outputs/apk/debug/app-debug.apk"
+          echo "========================================="

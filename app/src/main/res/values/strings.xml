@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SGC</string>
+    <string name="home_title">Inicio</string>
+    <string name="clients_title">Usuarios</string>
+    <string name="services_title">Servicios</string>
+    <string name="profile_title">Perfíl</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="add_client">Agregar Cliente</string>
+    <string name="add_service">Agregar Servicio</string>
+    <string name="search">Buscar</string>
+    <string name="exit">SALIR</string>
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="currency_usd">USD - Dólar Estadounidense</string>
+    <string name="currency_cup">CUP - Peso Cubano</string>
+    <string name="theme_light">Modo Claro</string>
+    <string name="theme_dark">Modo Oscuro</string>
+</resources>
