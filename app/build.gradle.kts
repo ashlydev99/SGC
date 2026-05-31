@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "cu.thunder.ai"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "cu.thunder.ai"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 29
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
     }
@@ -45,7 +45,9 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.core:core:1.18.0")
+
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.0")
 
@@ -60,7 +62,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // 🔧 Ajustado: versión compatible con Java 17
+    // Markdown renderer compatible con Java 17 y compileSdk 36
     implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.39.2")
 
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
