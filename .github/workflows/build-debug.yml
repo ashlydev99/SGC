@@ -1,242 +1,103 @@
-name: Build Debug APK
+name: Compilar APK ThunderAI
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Tipo de compilación'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
+  workflow_dispatch:  # Ejecución manual desde GitHub
 
 jobs:
   build:
-    name: Compilar APK Debug
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout del código
+      # 1. Clonar el repositorio
+      - name: Checkout código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
+      # 2. Configurar Java 17
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
       
-      - name: Crear directorios necesarios
+      # 3. Configurar Android SDK
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-35
+            build-tools;35.0.0
+            platform-tools
+          api-level: 35
+          build-tools: 35.0.0
+      
+      # 4. Aceptar licencias de Android
+      - name: Aceptar licencias de Android
         run: |
-          mkdir -p gradle/wrapper
-          echo "✅ Directorios creados"
+          yes | sdkmanager --licenses || true
       
-      - name: Crear gradle-wrapper.properties
-        run: |
-          cat > gradle/wrapper/gradle-wrapper.properties << 'PROPERTIES'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-          networkTimeout=10000
-          validateDistributionUrl=true
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          PROPERTIES
-          echo "✅ gradle-wrapper.properties creado"
-          cat gradle/wrapper/gradle-wrapper.properties
+      # 5. Dar permisos de ejecución a gradlew
+      - name: Dar permisos a gradlew
+        run: chmod +x gradlew
       
-      - name: Descargar Gradle Wrapper JAR
-        run: |
-          echo "Descargando gradle-wrapper.jar..."
-          curl -L -o gradle/wrapper/gradle-wrapper.jar \
-            "https://github.com/gradle/gradle/raw/v8.5.0/gradle/wrapper/gradle-wrapper.jar"
-          
-          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "✅ gradle-wrapper.jar descargado correctamente"
-            ls -la gradle/wrapper/gradle-wrapper.jar
-          else
-            echo "❌ Error al descargar gradle-wrapper.jar"
-            exit 1
-          fi
+      # 6. Cache de Gradle para acelerar compilaciones
+      - name: Cache de Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       
-      - name: Crear script gradlew
-        run: |
-          cat > gradlew << 'GRADLEWSCRIPT'
-          #!/bin/sh
-          
-          ##############################################################################
-          ##
-          ##  Gradle start up script for UN*X
-          ##
-          ##############################################################################
-          
-          # Attempt to set APP_HOME
-          PRG="$0"
-          while [ -h "$PRG" ] ; do
-              ls=`ls -ld "$PRG"`
-              link=`expr "$ls" : '.*-> \(.*\)$'`
-              if expr "$link" : '/.*' > /dev/null; then
-                  PRG="$link"
-              else
-                  PRG=`dirname "$PRG"`"/$link"
-              fi
-          done
-          SAVED="`pwd`"
-          cd "`dirname \"$PRG\"`/" >/dev/null
-          APP_HOME="`pwd -P`"
-          cd "$SAVED" >/dev/null
-          
-          APP_NAME="Gradle"
-          APP_BASE_NAME=`basename "$0"`
-          
-          # Add default JVM options here.
-          DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
-          
-          # Use the maximum available, or set MAX_FD != -1 to use that value.
-          MAX_FD="maximum"
-          
-          warn () {
-              echo "$*"
-          }
-          
-          die () {
-              echo
-              echo "$*"
-              echo
-              exit 1
-          }
-          
-          # OS specific support (must be 'true' or 'false').
-          cygwin=false
-          msys=false
-          darwin=false
-          nonstop=false
-          case "`uname`" in
-            CYGWIN* )
-              cygwin=true
-              ;;
-            Darwin* )
-              darwin=true
-              ;;
-            MINGW* )
-              msys=true
-              ;;
-            NONSTOP* )
-              nonstop=true
-              ;;
-          esac
-          
-          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-          
-          # Determine the Java command to use to start the JVM.
-          if [ -n "$JAVA_HOME" ] ; then
-              if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
-                  JAVACMD="$JAVA_HOME/jre/sh/java"
-              else
-                  JAVACMD="$JAVA_HOME/bin/java"
-              fi
-              if [ ! -x "$JAVACMD" ] ; then
-                  die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME"
-              fi
-          else
-              JAVACMD="java"
-              which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH."
-          fi
-          
-          # Escape application args
-          save () {
-              for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
-              echo " "
-          }
-          APP_ARGS=$(save "$@")
-          
-          # Collect all arguments for the java command, following the shell quoting and substitution rules
-          eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "\"-Dorg.gradle.appname=$APP_BASE_NAME\"" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$APP_ARGS"
-          
-          exec "$JAVACMD" "$@"
-          GRADLEWSCRIPT
-          
-          echo "✅ Script gradlew creado"
+      # 7. Cache del SDK de Android
+      - name: Cache de Android SDK
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.android/build-cache
+            ~/.android/cache
+          key: ${{ runner.os }}-android-cache
       
-      - name: Dar permisos de ejecución a gradlew
-        run: |
-          chmod +x gradlew
-          echo "✅ Permisos otorgados a gradlew"
-          ls -la gradlew
-      
-      - name: Verificar estructura completa
-        run: |
-          echo "========================================="
-          echo "  VERIFICACIÓN DE ESTRUCTURA"
-          echo "========================================="
-          echo ""
-          echo "=== Raíz del proyecto ==="
-          ls -la
-          echo ""
-          echo "=== Gradle Wrapper ==="
-          ls -la gradle/wrapper/
-          echo ""
-          echo "=== gradlew ==="
-          file gradlew
-          echo ""
-          echo "=== Java version ==="
-          java -version
-          echo ""
-          echo "=== Contenido de settings.gradle.kts ==="
-          cat settings.gradle.kts
-          echo ""
-          echo "========================================="
-      
+      # 8. Compilar APK de Debug
       - name: Compilar APK Debug
-        run: |
-          echo "Iniciando compilación debug..."
-          ./gradlew assembleDebug --stacktrace --no-daemon --info
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
       
-      - name: Verificar APK generado
-        run: |
-          echo "========================================="
-          echo "  BUSCANDO APK GENERADO"
-          echo "========================================="
-          echo ""
-          echo "=== Buscando archivos APK ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No se encontraron APKs"
-          echo ""
-          echo "=== Verificando ruta esperada ==="
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "✅ APK Debug encontrado en ruta esperada"
-            ls -la app/build/outputs/apk/debug/
-          elif [ -f "app/build/outputs/apk/debug/debug/app-debug.apk" ]; then
-            echo "⚠️ APK encontrado en ruta alternativa"
-            mkdir -p app/build/outputs/apk/debug/
-            cp app/build/outputs/apk/debug/debug/app-debug.apk app/build/outputs/apk/debug/app-debug.apk
-            ls -la app/build/outputs/apk/debug/
-          else
-            echo "❌ APK no encontrado"
-            echo "=== Estructura de build ==="
-            find app/build -type d 2>/dev/null | head -20
-            exit 1
-          fi
+      # 9. Compilar APK de Release (opcional)
+      - name: Compilar APK Release
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        continue-on-error: true  # No falla si no hay keystore configurado
       
-      - name: Subir APK Debug como artefacto
+      # 10. Subir APK Debug como artefacto
+      - name: Subir APK Debug
         uses: actions/upload-artifact@v4
         with:
-          name: SGC-Debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ThunderAI-Debug
+          path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
-          compression-level: 6
       
-      - name: Mostrar información del build
-        run: |
-          echo "========================================="
-          echo "  COMPILACIÓN COMPLETADA EXITOSAMENTE"
-          echo "========================================="
-          echo "Fecha: $(date)"
-          echo "Build type: Debug"
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "APK: app/build/outputs/apk/debug/app-debug.apk"
-            echo "Tamaño: $(ls -lh app/build/outputs/apk/debug/app-debug.apk | awk '{print $5}')"
-          fi
-          echo "========================================="
+      # 11. Subir APK Release como artefacto (si existe)
+      - name: Subir APK Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThunderAI-Release
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+      
+      # 12. Subir reporte de compilación
+      - name: Subir logs de compilación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            app/build/reports/
+            app/build/outputs/logs/
+          retention-days: 7
+      
+      # 13. Limpiar cache de Gradle al finalizar
+      - name: Limpiar cache de Gradle
+        run: rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
