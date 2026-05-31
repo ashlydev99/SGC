@@ -62,10 +62,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Markdown renderer compatible con Java 17 y compileSdk 36
+    // Markdown renderer compatible con Kotlin 2.x
     implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.39.2")
 
+    // Librería Llama compilada con Kotlin 2.x
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
+
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
 
     testImplementation("junit:junit:4.13.2")
