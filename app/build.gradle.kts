@@ -60,8 +60,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // 🔧 Librería correcta de Mike Penz
-    implementation("com.mikepenz:multiplatform-markdown-renderer:0.41.0")
+    // 🔧 Ajustado: versión compatible con Java 17
+    implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.0")
 
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
