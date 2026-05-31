@@ -61,7 +61,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // 🔧 Ajustado para JitPack
-    implementation("com.github.mikepenz:markdown-compose:0.6.0")
+    implementation("com.github.mikepenz:MarkdownCompose:0.6.0")
 
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
