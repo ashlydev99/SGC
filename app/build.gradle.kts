@@ -61,7 +61,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
     // 🔧 Ajustado: versión compatible con Java 17
-    implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.0")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.39.2")
 
     implementation("io.github.ljcamargo:llamacpp-kotlin:0.4.0")
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
