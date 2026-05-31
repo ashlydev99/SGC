@@ -1,47 +1,31 @@
 name: Compilar APK ThunderAI
 
 on:
-  workflow_dispatch:  # Ejecución manual desde GitHub
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Clonar el repositorio
       - name: Checkout código
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       
-      # 2. Configurar Java 17
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
       
-      # 3. Configurar Android SDK
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platforms;android-35
-            build-tools;35.0.0
-            platform-tools
-          api-level: 35
-          build-tools: 35.0.0
+          packages: 'platforms;android-34'
+          api-level: 34
       
-      # 4. Aceptar licencias de Android
-      - name: Aceptar licencias de Android
-        run: |
-          yes | sdkmanager --licenses || true
-      
-      # 5. Dar permisos de ejecución a gradlew
       - name: Dar permisos a gradlew
         run: chmod +x gradlew
       
-      # 6. Cache de Gradle para acelerar compilaciones
       - name: Cache de Gradle
         uses: actions/cache@v3
         with:
@@ -52,52 +36,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-      # 7. Cache del SDK de Android
-      - name: Cache de Android SDK
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.android/build-cache
-            ~/.android/cache
-          key: ${{ runner.os }}-android-cache
-      
-      # 8. Compilar APK de Debug
       - name: Compilar APK Debug
         run: ./gradlew assembleDebug --stacktrace --no-daemon
       
-      # 9. Compilar APK de Release (opcional)
-      - name: Compilar APK Release
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
-        continue-on-error: true  # No falla si no hay keystore configurado
-      
-      # 10. Subir APK Debug como artefacto
       - name: Subir APK Debug
         uses: actions/upload-artifact@v4
         with:
           name: ThunderAI-Debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
-      
-      # 11. Subir APK Release como artefacto (si existe)
-      - name: Subir APK Release
-        uses: actions/upload-artifact@v4
-        with:
-          name: ThunderAI-Release
-          path: app/build/outputs/apk/release/*.apk
-          retention-days: 30
-          if-no-files-found: warn
-      
-      # 12. Subir reporte de compilación
-      - name: Subir logs de compilación
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: |
-            app/build/reports/
-            app/build/outputs/logs/
-          retention-days: 7
-      
-      # 13. Limpiar cache de Gradle al finalizar
-      - name: Limpiar cache de Gradle
-        run: rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
