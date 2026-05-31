@@ -1,13 +1,16 @@
-#!/bin/sh
+cat > gradlew << 'EOF'
+#!/bin/bash
 
-APP_HOME=$(cd "$(dirname "$0")" && pwd)
+# Gradle Wrapper SIMPLIFICADO
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+JAR="$DIR/gradle/wrapper/gradle-wrapper.jar"
 
-CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-
-if [ -n "$JAVA_HOME" ] ; then
-    JAVACMD="$JAVA_HOME/bin/java"
-else
-    JAVACMD="java"
+if [ ! -f "$JAR" ]; then
+    echo "ERROR: No se encontró $JAR"
+    exit 1
 fi
 
-exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+exec java -jar "$JAR" "$@"
+EOF
+
+chmod +x gradlew
