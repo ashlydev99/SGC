@@ -47,30 +47,22 @@ jobs:
         run: |
           echo "=== Verificando gradlew ==="
           
-          # Verificar si existe gradlew
           if [ -f "gradlew" ]; then
             echo "✅ gradlew encontrado"
-            
-            # Convertir a formato Unix (eliminar retornos de carro)
             sed -i 's/\r$//' gradlew
-            
-            # Dar permisos de ejecución
             chmod +x gradlew
             
-            # Verificar que es ejecutable
             if [ -x "gradlew" ]; then
               echo "✅ gradlew es ejecutable"
             else
               echo "❌ Error: No se pudo hacer ejecutable gradlew"
               exit 1
             fi
-            
           else
             echo "❌ Error: gradlew no encontrado en la raíz"
             echo "Buscando en subdirectorios..."
             find . -name "gradlew" -type f
             
-            # Si no existe, intentar generarlo
             echo "Intentando generar gradlew..."
             if command -v gradle &> /dev/null; then
               gradle wrapper --gradle-version 8.5
@@ -82,7 +74,6 @@ jobs:
             fi
           fi
           
-          # Verificar gradle-wrapper.jar
           if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
             JAR_SIZE=$(stat -c%s "gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || echo "0")
             echo "📦 gradle-wrapper.jar: $JAR_SIZE bytes"
@@ -91,31 +82,20 @@ jobs:
               echo "⚠️  El archivo jar parece muy pequeño, podría estar corrupto"
               echo "Descargando gradle-wrapper.jar..."
               mkdir -p gradle/wrapper
-              wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" \
-                -O gradle/wrapper/gradle-wrapper.jar
+              wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
               echo "✅ gradle-wrapper.jar descargado"
             fi
           else
             echo "⚠️  gradle-wrapper.jar no encontrado, descargando..."
             mkdir -p gradle/wrapper
-            wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" \
-              -O gradle/wrapper/gradle-wrapper.jar
+            wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
             echo "✅ gradle-wrapper.jar descargado"
           fi
           
-          # Verificar gradle-wrapper.properties
           if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
             echo "⚠️  gradle-wrapper.properties no encontrado, creando..."
             mkdir -p gradle/wrapper
-            cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-      distributionBase=GRADLE_USER_HOME
-      distributionPath=wrapper/dists
-      distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-      networkTimeout=10000
-      validateDistributionUrl=true
-      zipStoreBase=GRADLE_USER_HOME
-      zipStorePath=wrapper/dists
-      EOF
+            printf "distributionBase=GRADLE_USER_HOME\ndistributionPath=wrapper/dists\ndistributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.5-bin.zip\nnetworkTimeout=10000\nvalidateDistributionUrl=true\nzipStoreBase=GRADLE_USER_HOME\nzipStorePath=wrapper/dists\n" > gradle/wrapper/gradle-wrapper.properties
             echo "✅ gradle-wrapper.properties creado"
           fi
       
@@ -154,11 +134,9 @@ jobs:
           echo "=== Buscando APK generada ==="
           find app/build/outputs -name "*.apk" -type f
           
-          # Verificar APK Debug
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
             APK_SIZE=$(stat -c%s "app/build/outputs/apk/debug/app-debug.apk" 2>/dev/null || echo "0")
-            APK_SIZE_MB=$(echo "scale=2; $APK_SIZE/1048576" | bc 2>/dev/null || echo "0")
-            echo "✅ APK Debug encontrada: ${APK_SIZE_MB}MB ($APK_SIZE bytes)"
+            echo "✅ APK Debug encontrada: $APK_SIZE bytes"
           else
             echo "⚠️  No se encontró app-debug.apk, buscando otras APKs..."
             find app/build/outputs -name "*.apk" -type f
@@ -179,7 +157,6 @@ jobs:
           name: build-reports-${{ github.run_number }}
           path: |
             app/build/reports/
-            ~/.gradle/daemon/
           retention-days: 7
       
       - name: 🎉 Compilación exitosa
@@ -192,7 +169,6 @@ jobs:
           echo "║  📱 ThunderAI v1.0.0                                  ║"
           echo "║  📦 Paquete: cu.thunder.ai                            ║"
           echo "║  🔨 Build: Debug                                      ║"
-          echo "║  📅 Fecha: $(date '+%Y-%m-%d %H:%M:%S')                       ║"
           echo "║  🏷️  Número: #${{ github.run_number }}                                ║"
           echo "╚════════════════════════════════════════════════════════╝"
           echo ""
