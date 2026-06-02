@@ -1,0 +1,200 @@
+name: Compilar APK ThunderAI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🔧 Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          
+      - name: 📱 Configurar Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-34
+            build-tools;34.0.0
+            ndk;26.1.10909125
+          api-level: 34
+      
+      - name: 🔍 Verificar estructura del proyecto
+        run: |
+          echo "=== Estructura del proyecto ==="
+          ls -la
+          echo ""
+          echo "=== Archivos Gradle ==="
+          find . -name "*.gradle*" -type f
+          echo ""
+          echo "=== Archivos fuente ==="
+          find . -name "*.kt" -type f | head -20
+      
+      - name: 🛠️ Preparar Gradle Wrapper
+        run: |
+          echo "=== Verificando gradlew ==="
+          
+          # Verificar si existe gradlew
+          if [ -f "gradlew" ]; then
+            echo "✅ gradlew encontrado"
+            
+            # Convertir a formato Unix (eliminar retornos de carro)
+            sed -i 's/\r$//' gradlew
+            
+            # Dar permisos de ejecución
+            chmod +x gradlew
+            
+            # Verificar que es ejecutable
+            if [ -x "gradlew" ]; then
+              echo "✅ gradlew es ejecutable"
+            else
+              echo "❌ Error: No se pudo hacer ejecutable gradlew"
+              exit 1
+            fi
+            
+          else
+            echo "❌ Error: gradlew no encontrado en la raíz"
+            echo "Buscando en subdirectorios..."
+            find . -name "gradlew" -type f
+            
+            # Si no existe, intentar generarlo
+            echo "Intentando generar gradlew..."
+            if command -v gradle &> /dev/null; then
+              gradle wrapper --gradle-version 8.5
+              chmod +x gradlew
+              echo "✅ gradlew generado automáticamente"
+            else
+              echo "❌ Gradle no está instalado. No se puede generar gradlew"
+              exit 1
+            fi
+          fi
+          
+          # Verificar gradle-wrapper.jar
+          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            JAR_SIZE=$(stat -c%s "gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || echo "0")
+            echo "📦 gradle-wrapper.jar: $JAR_SIZE bytes"
+            
+            if [ "$JAR_SIZE" -lt 10000 ]; then
+              echo "⚠️  El archivo jar parece muy pequeño, podría estar corrupto"
+              echo "Descargando gradle-wrapper.jar..."
+              mkdir -p gradle/wrapper
+              wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" \
+                -O gradle/wrapper/gradle-wrapper.jar
+              echo "✅ gradle-wrapper.jar descargado"
+            fi
+          else
+            echo "⚠️  gradle-wrapper.jar no encontrado, descargando..."
+            mkdir -p gradle/wrapper
+            wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" \
+              -O gradle/wrapper/gradle-wrapper.jar
+            echo "✅ gradle-wrapper.jar descargado"
+          fi
+          
+          # Verificar gradle-wrapper.properties
+          if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+            echo "⚠️  gradle-wrapper.properties no encontrado, creando..."
+            mkdir -p gradle/wrapper
+            cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+      distributionBase=GRADLE_USER_HOME
+      distributionPath=wrapper/dists
+      distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+      networkTimeout=10000
+      validateDistributionUrl=true
+      zipStoreBase=GRADLE_USER_HOME
+      zipStorePath=wrapper/dists
+      EOF
+            echo "✅ gradle-wrapper.properties creado"
+          fi
+      
+      - name: 📋 Mostrar información de compilación
+        run: |
+          echo "=== Información del sistema ==="
+          echo "SO: $(uname -a)"
+          echo "Java: $(java -version 2>&1 | head -1)"
+          echo ""
+          echo "=== Versión de Gradle ==="
+          ./gradlew --version 2>&1 || echo "No se pudo obtener versión"
+      
+      - name: 📦 Cache de dependencias
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.android/build-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      
+      - name: 🧹 Limpiar builds anteriores
+        run: ./gradlew clean --stacktrace --no-daemon
+      
+      - name: 🔨 Compilar APK Debug
+        run: |
+          echo "=== Iniciando compilación ==="
+          ./gradlew assembleDebug --stacktrace --no-daemon --build-cache
+          echo "=== Compilación completada ==="
+        timeout-minutes: 30
+      
+      - name: 📊 Verificar APK generada
+        run: |
+          echo "=== Buscando APK generada ==="
+          find app/build/outputs -name "*.apk" -type f
+          
+          # Verificar APK Debug
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            APK_SIZE=$(stat -c%s "app/build/outputs/apk/debug/app-debug.apk" 2>/dev/null || echo "0")
+            APK_SIZE_MB=$(echo "scale=2; $APK_SIZE/1048576" | bc 2>/dev/null || echo "0")
+            echo "✅ APK Debug encontrada: ${APK_SIZE_MB}MB ($APK_SIZE bytes)"
+          else
+            echo "⚠️  No se encontró app-debug.apk, buscando otras APKs..."
+            find app/build/outputs -name "*.apk" -type f
+          fi
+      
+      - name: 📤 Subir APK Debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThunderAI-Debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+          compression-level: 9
+      
+      - name: 📤 Subir reportes de compilación
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports-${{ github.run_number }}
+          path: |
+            app/build/reports/
+            ~/.gradle/daemon/
+          retention-days: 7
+      
+      - name: 🎉 Compilación exitosa
+        if: success()
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════╗"
+          echo "║          ✅ APK DEBUG COMPILADA EXITOSAMENTE          ║"
+          echo "╠════════════════════════════════════════════════════════╣"
+          echo "║  📱 ThunderAI v1.0.0                                  ║"
+          echo "║  📦 Paquete: cu.thunder.ai                            ║"
+          echo "║  🔨 Build: Debug                                      ║"
+          echo "║  📅 Fecha: $(date '+%Y-%m-%d %H:%M:%S')                       ║"
+          echo "║  🏷️  Número: #${{ github.run_number }}                                ║"
+          echo "╚════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "📥 Descarga la APK desde la pestaña 'Artifacts'"
+          echo ""
