@@ -19,11 +19,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        
-        // Configuración de NDK para librerías nativas (llama.cpp)
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
-        }
     }
 
     buildTypes {
@@ -67,21 +62,6 @@ android {
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/NOTICE.md"
         }
-        
-        // Para reducir tamaño de APK
-        jniLibs {
-            useLegacyPackaging = true
-        }
-    }
-    
-    // Configuración de splits para reducir tamaño de APK
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
-            isUniversalApk = false
-        }
     }
 }
 
@@ -115,7 +95,6 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
-    annotationProcessor("androidx.room:room-compiler:2.6.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -127,14 +106,8 @@ dependencies {
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Google Fonts
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.5.4")
-
     // Material Design
     implementation("com.google.android.material:material:1.10.0")
-
-    // ML Libraries
-    implementation("com.google.mediapipe:tasks-genai:0.10.8")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
@@ -144,27 +117,4 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
-    // Dependencias adicionales para mejor experiencia
-    implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.window:window:1.2.0")
-    
-    // Para animaciones mejoradas
-    implementation("androidx.compose.animation:animation-graphics:1.5.4")
-}
-
-// Configuración para reducir tamaño de APK
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        variant.packaging {
-            resources {
-                excludes.add("/META-INF/**")
-                excludes.add("/okhttp3/**")
-                excludes.add("/kotlin/**")
-                excludes.add("/org/**")
-                excludes.add("/**.properties")
-                excludes.add("/**.bin")
-            }
-        }
-    }
 }
