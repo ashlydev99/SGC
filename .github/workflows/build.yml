@@ -10,127 +10,101 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout código
+      - name: Checkout codigo
         uses: actions/checkout@v4
       
-      - name: 🔧 Configurar JDK 17
+      - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: 📱 Configurar Android SDK
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
           build-tools: '34.0.0'
       
-      - name: 🔍 Verificar archivos del proyecto
+      - name: Verificar archivos del proyecto
         run: |
           echo "=== Directorio actual ==="
           pwd
           echo ""
-          echo "=== Archivos en raíz ==="
+          echo "=== Archivos en raiz ==="
           ls -la
           echo ""
-          echo "=== Buscando archivos Gradle ==="
-          find . -name "*.gradle*" -o -name "gradle.properties" | sort
-          echo ""
           
-          # Verificar settings.gradle.kts
           if [ ! -f "settings.gradle.kts" ]; then
-            echo "❌ ERROR: settings.gradle.kts no encontrado"
             echo "Creando settings.gradle.kts..."
-            cat > settings.gradle.kts << 'SETTINGSEOF'
-pluginManagement {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-rootProject.name = "ThunderAI"
-include(":app")
-SETTINGSEOF
-            echo "✅ settings.gradle.kts creado"
+            echo 'pluginManagement {' > settings.gradle.kts
+            echo '    repositories {' >> settings.gradle.kts
+            echo '        google()' >> settings.gradle.kts
+            echo '        mavenCentral()' >> settings.gradle.kts
+            echo '        gradlePluginPortal()' >> settings.gradle.kts
+            echo '    }' >> settings.gradle.kts
+            echo '}' >> settings.gradle.kts
+            echo '' >> settings.gradle.kts
+            echo 'dependencyResolutionManagement {' >> settings.gradle.kts
+            echo '    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)' >> settings.gradle.kts
+            echo '    repositories {' >> settings.gradle.kts
+            echo '        google()' >> settings.gradle.kts
+            echo '        mavenCentral()' >> settings.gradle.kts
+            echo '    }' >> settings.gradle.kts
+            echo '}' >> settings.gradle.kts
+            echo '' >> settings.gradle.kts
+            echo 'rootProject.name = "ThunderAI"' >> settings.gradle.kts
+            echo 'include(":app")' >> settings.gradle.kts
+            echo "Creado settings.gradle.kts"
           fi
           
-          # Verificar build.gradle.kts raíz
           if [ ! -f "build.gradle.kts" ]; then
-            echo "❌ ERROR: build.gradle.kts no encontrado"
             echo "Creando build.gradle.kts..."
-            cat > build.gradle.kts << 'BUILDEOF'
-plugins {
-    id("com.android.application") version "8.2.0" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.20" apply false
-    id("com.google.devtools.ksp") version "1.9.20-1.0.14" apply false
-}
-BUILDEOF
-            echo "✅ build.gradle.kts creado"
+            echo 'plugins {' > build.gradle.kts
+            echo '    id("com.android.application") version "8.2.0" apply false' >> build.gradle.kts
+            echo '    id("org.jetbrains.kotlin.android") version "1.9.20" apply false' >> build.gradle.kts
+            echo '    id("com.google.devtools.ksp") version "1.9.20-1.0.14" apply false' >> build.gradle.kts
+            echo '}' >> build.gradle.kts
+            echo "Creado build.gradle.kts"
           fi
           
-          # Verificar gradle.properties
           if [ ! -f "gradle.properties" ]; then
             echo "Creando gradle.properties..."
-            cat > gradle.properties << 'PROPSEOF'
-org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-android.useAndroidX=true
-kotlin.code.style=official
-android.nonTransitiveRClass=true
-PROPSEOF
-            echo "✅ gradle.properties creado"
+            echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" > gradle.properties
+            echo "android.useAndroidX=true" >> gradle.properties
+            echo "kotlin.code.style=official" >> gradle.properties
+            echo "android.nonTransitiveRClass=true" >> gradle.properties
+            echo "Creado gradle.properties"
           fi
       
-      - name: 🛠️ Configurar Gradle Wrapper
+      - name: Configurar Gradle Wrapper
         run: |
-          # Eliminar cualquier archivo corrupto
-          rm -f gradle/wrapper/gradle-wrapper.properties
-          rm -f gradle/wrapper/gradle-wrapper.jar
-          
-          # Crear directorio
           mkdir -p gradle/wrapper
           
-          # Descargar gradle-wrapper.jar
           echo "Descargando gradle-wrapper.jar..."
-          wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" \
-            -O gradle/wrapper/gradle-wrapper.jar
+          wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
           
-          # Crear gradle-wrapper.properties
           echo "Creando gradle-wrapper.properties..."
-          cat > gradle/wrapper/gradle-wrapper.properties << 'WRAPPEREOF'
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-networkTimeout=10000
-validateDistributionUrl=true
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-WRAPPEREOF
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+          echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
+          echo "validateDistributionUrl=true" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
           
-          # Crear gradlew si no existe
-          if [ ! -f "gradlew" ]; then
-            echo "Creando gradlew..."
-            cat > gradlew << 'GRADLEWEOF'
-#!/bin/sh
-export GRADLE_USER_HOME="$HOME/.gradle"
-exec java -classpath "gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"
-GRADLEWEOF
+          if [ -f "gradlew" ]; then
+            sed -i 's/\r$//' gradlew
+            chmod +x gradlew
+          else
+            echo '#!/bin/sh' > gradlew
+            echo 'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"' >> gradlew
+            echo 'exec java -classpath "$SCRIPT_DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
+            chmod +x gradlew
           fi
           
-          # Asegurar permisos
-          sed -i 's/\r$//' gradlew
-          chmod +x gradlew
-          
-          echo "✅ Gradle Wrapper configurado"
+          echo "Gradle Wrapper configurado"
       
-      - name: 📦 Cache de dependencias
+      - name: Cache de dependencias
         uses: actions/cache@v3
         with:
           path: |
@@ -140,49 +114,40 @@ GRADLEWEOF
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-      - name: 🔨 Compilar APK Debug
+      - name: Compilar APK Debug
         run: |
-          echo "=== Iniciando compilación ==="
-          echo "Directorio: $(pwd)"
-          echo "Archivos gradle:"
-          ls -la *.gradle* gradle.properties 2>/dev/null
-          echo ""
-          
-          # Ejecutar sin argumentos extra
-          ./gradlew assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            --build-cache \
-            -Dorg.gradle.jvmargs="-Xmx2048m"
-          
-          echo "=== Compilación completada ==="
+          echo "=== Iniciando compilacion ==="
+          ./gradlew assembleDebug --no-daemon --stacktrace --build-cache
+          echo "=== Compilacion completada ==="
         timeout-minutes: 30
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
-          JAVA_OPTS: "-Xmx2048m"
       
-      - name: 📊 Verificar APK
+      - name: Verificar APK
         run: |
           echo "=== Buscando APK ==="
           find . -name "*.apk" -type f 2>/dev/null
           
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
             ls -lh app/build/outputs/apk/debug/app-debug.apk
-            echo "✅ APK generada correctamente"
+            echo "APK generada correctamente"
           else
-            echo "⚠️  APK no encontrada en ruta esperada"
-            echo "Buscando en todo el proyecto..."
+            echo "APK no encontrada en ruta esperada"
             find . -name "*.apk" -type f
           fi
       
-      - name: 📤 Subir APK
+      - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
           name: ThunderAI-Debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
       
-      - name: 🎉 Éxito
+      - name: Compilacion exitosa
         if: success()
         run: |
-          echo "✅ ThunderAI compilada correctamente"
+          echo ""
+          echo "============================================"
+          echo "  THUNDERAI COMPILADA CORRECTAMENTE"
+          echo "============================================"
+          echo "  Version: 1.0.0"
+          echo "  Build: Debug"
+          echo "============================================"
