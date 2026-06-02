@@ -186,7 +186,7 @@ fun AppDrawer(
             }
 
             item {
-                HorizontalDivider(color = SurfaceMedium)
+                Divider(color = SurfaceMedium)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

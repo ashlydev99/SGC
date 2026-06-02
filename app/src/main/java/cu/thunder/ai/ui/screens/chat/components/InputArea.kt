@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import cu.thunder.ai.ui.theme.*
 
@@ -22,7 +23,6 @@ fun InputArea(
     modifier: Modifier = Modifier
 ) {
     var message by remember { mutableStateOf("") }
-    var isFocused by remember { mutableStateOf(false) }
     var quickReplyMode by remember { mutableStateOf<String?>(null) }
 
     fun sendMessage() {
@@ -51,6 +51,7 @@ fun InputArea(
                 .padding(4.dp),
             verticalAlignment = Alignment.Bottom
         ) {
+            // Boton de respuesta rapida
             IconButton(
                 onClick = {
                     quickReplyMode = if (quickReplyMode == "quick") null else "quick"
@@ -65,6 +66,7 @@ fun InputArea(
                 )
             }
 
+            // Boton de pensar
             IconButton(
                 onClick = {
                     quickReplyMode = if (quickReplyMode == "think") null else "think"
@@ -79,6 +81,7 @@ fun InputArea(
                 )
             }
 
+            // Campo de texto
             OutlinedTextField(
                 value = message,
                 onValueChange = { message = it },
@@ -105,9 +108,11 @@ fun InputArea(
                     unfocusedPlaceholderColor = TextSecondary
                 ),
                 maxLines = 5,
-                singleLine = false
+                singleLine = false,
+                textStyle = MaterialTheme.typography.bodyMedium
             )
 
+            // Boton de enviar
             IconButton(
                 onClick = { sendMessage() },
                 modifier = Modifier

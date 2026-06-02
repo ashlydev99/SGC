@@ -1,15 +1,11 @@
 package cu.thunder.ai.util
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,11 +25,10 @@ fun MarkdownText(
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
+    val blocks = parseMarkdown(content)
 
     Column(modifier = modifier) {
-        val blocks = parseMarkdown(content)
-
-        blocks.forEach { block ->
+        for (block in blocks) {
             when (block) {
                 is MarkdownBlock.Code -> {
                     CodeBlock(block) {
@@ -60,8 +55,8 @@ fun MarkdownText(
                         )
                     )
                 }
-                is MarkdownBlock.List -> {
-                    block.items.forEach { item ->
+                is MarkdownBlock.ListBlock -> {
+                    for (item in block.items) {
                         Text(
                             text = "• $item",
                             color = TextPrimary,
@@ -100,7 +95,7 @@ private fun CodeBlock(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = block.language ?: "código",
+                text = block.language ?: "codigo",
                 color = ElectricBlue,
                 style = MaterialTheme.typography.labelSmall
             )
@@ -129,14 +124,14 @@ private sealed class MarkdownBlock {
     data class Bold(val text: String) : MarkdownBlock()
     data class Italic(val text: String) : MarkdownBlock()
     data class Code(val code: String, val language: String?) : MarkdownBlock()
-    data class List(val items: List<String>) : MarkdownBlock()
+    data class ListBlock(val items: kotlin.collections.List<String>) : MarkdownBlock()
 }
 
-private fun parseMarkdown(content: String): List<MarkdownBlock> {
+private fun parseMarkdown(content: String): kotlin.collections.List<MarkdownBlock> {
     val blocks = mutableListOf<MarkdownBlock>()
     val lines = content.split("\n")
     var i = 0
-    var listItems = mutableListOf<String>()
+    val listItems = mutableListOf<String>()
 
     while (i < lines.size) {
         val line = lines[i]
@@ -144,7 +139,7 @@ private fun parseMarkdown(content: String): List<MarkdownBlock> {
         when {
             line.startsWith("```") -> {
                 if (listItems.isNotEmpty()) {
-                    blocks.add(MarkdownBlock.List(listItems.toList()))
+                    blocks.add(MarkdownBlock.ListBlock(listItems.toList()))
                     listItems.clear()
                 }
                 
@@ -159,14 +154,14 @@ private fun parseMarkdown(content: String): List<MarkdownBlock> {
             }
             line.startsWith("**") && line.endsWith("**") -> {
                 if (listItems.isNotEmpty()) {
-                    blocks.add(MarkdownBlock.List(listItems.toList()))
+                    blocks.add(MarkdownBlock.ListBlock(listItems.toList()))
                     listItems.clear()
                 }
                 blocks.add(MarkdownBlock.Bold(line.removeSurrounding("**")))
             }
             line.startsWith("*") && !line.startsWith("**") -> {
                 if (listItems.isNotEmpty()) {
-                    blocks.add(MarkdownBlock.List(listItems.toList()))
+                    blocks.add(MarkdownBlock.ListBlock(listItems.toList()))
                     listItems.clear()
                 }
                 blocks.add(MarkdownBlock.Italic(line.removeSurrounding("*")))
@@ -176,7 +171,7 @@ private fun parseMarkdown(content: String): List<MarkdownBlock> {
             }
             else -> {
                 if (listItems.isNotEmpty() && line.isBlank()) {
-                    blocks.add(MarkdownBlock.List(listItems.toList()))
+                    blocks.add(MarkdownBlock.ListBlock(listItems.toList()))
                     listItems.clear()
                 } else if (line.isNotBlank()) {
                     blocks.add(MarkdownBlock.Text(line))
@@ -187,7 +182,7 @@ private fun parseMarkdown(content: String): List<MarkdownBlock> {
     }
 
     if (listItems.isNotEmpty()) {
-        blocks.add(MarkdownBlock.List(listItems.toList()))
+        blocks.add(MarkdownBlock.ListBlock(listItems.toList()))
     }
 
     return blocks
