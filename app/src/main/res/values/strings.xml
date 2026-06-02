@@ -1,3 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ThunderAI</string>
+    <string name="chat_title">Chat</string>
+    <string name="settings_title">Configuración</string>
+    <string name="new_conversation">Nueva conversación</string>
+    <string name="send_message">Enviar mensaje</string>
+    <string name="select_model">Seleccionar modelo</string>
+    <string name="clear_history">Limpiar historial</string>
+    <string name="search_chats">Buscar conversaciones</string>
+    <string name="pinned_chats">Fijados</string>
+    <string name="recent_chats">Recientes</string>
 </resources>

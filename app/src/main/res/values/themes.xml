@@ -1,8 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Tema principal de la aplicación -->
     <style name="Theme.ThunderAI" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0A1929</item>
-        <item name="android:navigationBarColor">#0A1929</item>
-        <item name="android:windowBackground">@color/battlenet_dark</item>
+        <!-- Color de fondo principal -->
+        <item name="android:colorBackground">#FF0A1929</item>
+        
+        <!-- Barra de estado -->
+        <item name="android:statusBarColor">#FF0A1929</item>
+        <item name="android:windowLightStatusBar">false</item>
+        
+        <!-- Barra de navegación -->
+        <item name="android:navigationBarColor">#FF0A1929</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        
+        <!-- Fondo de la ventana -->
+        <item name="android:windowBackground">#FF0A1929</item>
+        
+        <!-- Color de acento -->
+        <item name="android:colorAccent">#FF00D4FF</item>
+        
+        <!-- Color primario -->
+        <item name="android:colorPrimary">#FF00D4FF</item>
+        <item name="android:colorPrimaryDark">#FF0A1929</item>
+        
+        <!-- Animaciones -->
+        <item name="android:windowAnimationStyle">@style/WindowAnimation</item>
+        
+        <!-- Permitir contenido detrás de barras del sistema -->
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+    <!-- Estilo para la pantalla de splash -->
+    <style name="Theme.ThunderAI.Splash" parent="Theme.ThunderAI">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+
+    <!-- Animaciones de ventana -->
+    <style name="WindowAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:activityOpenExitAnimation">@android:anim/fade_out</item>
+        <item name="android:activityCloseEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:activityCloseExitAnimation">@android:anim/fade_out</item>
+    </style>
+
+    <!-- Estilo para TextInputLayout -->
+    <style name="TextInputStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#FF00D4FF</item>
+        <item name="hintTextColor">#FF8A99AA</item>
+        <item name="android:textColor">#FFE8EDF2</item>
+        <item name="boxBackgroundColor">#FF1B263B</item>
+    </style>
+
+    <!-- Estilo para botones -->
+    <style name="PrimaryButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:backgroundTint">#FF00D4FF</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
+    <!-- Estilo para cards -->
+    <style name="CardStyle" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">#FF1B263B</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
     </style>
 </resources>
