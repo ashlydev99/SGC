@@ -35,6 +35,7 @@ fun ChatScreen(
     val isGenerating by viewModel.isGenerating.collectAsState()
     val currentResponse by viewModel.currentResponse.collectAsState()
     val isWelcomeScreen by viewModel.isWelcomeScreen.collectAsState()
+    val userName by viewModel.userName.collectAsState()
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -128,6 +129,7 @@ fun ChatScreen(
                         onSuggestionClick = { suggestion ->
                             viewModel.sendMessage(suggestion)
                         },
+                        userName = userName,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {

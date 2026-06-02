@@ -3,6 +3,7 @@ package cu.thunder.ai.ui.screens.chat.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import cu.thunder.ai.ui.theme.*
 @Composable
 fun WelcomeScreen(
     onSuggestionClick: (String) -> Unit,
+    userName: String = "Usuario",
     modifier: Modifier = Modifier
 ) {
     val suggestions = listOf(
@@ -34,7 +36,7 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(60.dp))
             
             Text(
-                text = "Hola Usuario",
+                text = "Hola $userName",
                 style = MaterialTheme.typography.headlineLarge,
                 color = ElectricBlue,
                 textAlign = TextAlign.Center,
@@ -54,18 +56,18 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        items(suggestions.size) { index ->
+        itemsIndexed(suggestions) { index, suggestion ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
-                    .clickable { onSuggestionClick(suggestions[index]) },
+                    .clickable { onSuggestionClick(suggestion) },
                 colors = CardDefaults.cardColors(
                     containerColor = SurfaceMedium.copy(alpha = 0.7f)
                 )
             ) {
                 Text(
-                    text = suggestions[index],
+                    text = suggestion,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     modifier = Modifier.padding(16.dp)

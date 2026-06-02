@@ -20,30 +20,37 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cu.thunder.ai.ui.screens.chat.ChatViewModel
 import cu.thunder.ai.ui.theme.*
 import cu.thunder.ai.util.ModelLoader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    var userName by remember { mutableStateOf("Usuario") }
-    var temperature by remember { mutableFloatStateOf(0.7f) }
-    var maxTokens by remember { mutableIntStateOf(2048) }
-    var modelPath by remember { mutableStateOf<String?>(null) }
+    
+    // Obtener valores del ViewModel (que ya tiene SharedPreferences)
+    val userName by chatViewModel.userName.collectAsState()
+    val temperature by chatViewModel.temperature.collectAsState()
+    val maxTokens by chatViewModel.maxTokens.collectAsState()
+    val modelPath by chatViewModel.modelPath.collectAsState()
+    
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var isModelLoaded by remember { mutableStateOf(false) }
+    val isModelLoaded = modelPath != null
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
             val fileName = uri.lastPathSegment ?: "model.bin"
-            modelPath = fileName
-            isModelLoaded = true
+            chatViewModel.updateModelPath(fileName)
+            // Copiar modelo a almacenamiento interno
+            ModelLoader.loadModel(context, uri)
         }
     }
 
@@ -51,10 +58,7 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Configuracion",
-                        color = ElectricBlue
-                    )
+                    Text("Configuracion", color = ElectricBlue)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -89,11 +93,7 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             // Seccion de Perfil
-            Text(
-                "Perfil",
-                style = MaterialTheme.typography.titleLarge,
-                color = ElectricBlue
-            )
+            Text("Perfil", style = MaterialTheme.typography.titleLarge, color = ElectricBlue)
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
@@ -101,9 +101,7 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = SurfaceMedium)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -121,23 +119,11 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = userName,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Usuario",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
+                        Text(text = userName, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                        Text(text = "Usuario", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                     }
                     IconButton(onClick = { showEditDialog = true }) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Editar",
-                            tint = ElectricBlue
-                        )
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = ElectricBlue)
                     }
                 }
             }
@@ -145,11 +131,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Seccion de Modelo
-            Text(
-                "Modelo de IA",
-                style = MaterialTheme.typography.titleLarge,
-                color = ElectricBlue
-            )
+            Text("Modelo de IA", style = MaterialTheme.typography.titleLarge, color = ElectricBlue)
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
@@ -163,11 +145,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(
-                                "Estado",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
-                            )
+                            Text("Estado", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                             Text(
                                 if (isModelLoaded) "Cargado" else "No cargado",
                                 style = MaterialTheme.typography.titleMedium,
@@ -175,8 +153,7 @@ fun SettingsScreen(
                             )
                         }
                         Icon(
-                            if (isModelLoaded) Icons.Default.CheckCircle
-                            else Icons.Default.Error,
+                            if (isModelLoaded) Icons.Default.CheckCircle else Icons.Default.Error,
                             contentDescription = null,
                             tint = if (isModelLoaded) SuccessGreen else ErrorRed
                         )
@@ -193,18 +170,11 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = {
-                            filePickerLauncher.launch(arrayOf("*/*"))
-                        },
+                        onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ElectricBlue
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue)
                     ) {
-                        Icon(
-                            Icons.Default.FolderOpen,
-                            contentDescription = null
-                        )
+                        Icon(Icons.Default.FolderOpen, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Seleccionar modelo")
                     }
@@ -214,11 +184,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Seccion de Parametros
-            Text(
-                "Parametros de generacion",
-                style = MaterialTheme.typography.titleLarge,
-                color = ElectricBlue
-            )
+            Text("Parametros de generacion", style = MaterialTheme.typography.titleLarge, color = ElectricBlue)
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
@@ -226,14 +192,10 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = SurfaceMedium)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Temperatura: $temperature",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
-                    )
+                    Text("Temperatura: $temperature", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                     Slider(
                         value = temperature,
-                        onValueChange = { temperature = it },
+                        onValueChange = { chatViewModel.updateTemperature(it) },
                         valueRange = 0.1f..1.5f,
                         colors = SliderDefaults.colors(
                             thumbColor = ElectricBlue,
@@ -244,14 +206,10 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        "Maximo de tokens: $maxTokens",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary
-                    )
+                    Text("Maximo de tokens: $maxTokens", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                     Slider(
                         value = maxTokens.toFloat(),
-                        onValueChange = { maxTokens = it.toInt() },
+                        onValueChange = { chatViewModel.updateMaxTokens(it.toInt()) },
                         valueRange = 256f..4096f,
                         colors = SliderDefaults.colors(
                             thumbColor = ElectricBlue,
@@ -265,11 +223,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Seccion de Ayuda
-            Text(
-                "Ayuda",
-                style = MaterialTheme.typography.titleLarge,
-                color = ElectricBlue
-            )
+            Text("Ayuda", style = MaterialTheme.typography.titleLarge, color = ElectricBlue)
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
@@ -300,13 +254,10 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Boton de limpiar historial
             OutlinedButton(
                 onClick = { showDeleteDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = ErrorRed
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed)
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -320,24 +271,9 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "© 2025 AshlyDev",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Ashly Castell",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Version 1.0.0",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
+                Text("© 2025 AshlyDev", style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+                Text("Ashly Castell", style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
+                Text("Version 1.0.0", style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
             }
         }
     }
@@ -353,12 +289,18 @@ fun SettingsScreen(
                     value = newName,
                     onValueChange = { newName = it },
                     placeholder = { Text("Ingresa tu nombre") },
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        cursorColor = ElectricBlue,
+                        focusedBorderColor = ElectricBlue
+                    )
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    userName = newName
+                    chatViewModel.updateUserName(newName)
                     showEditDialog = false
                 }) {
                     Text("Guardar")
@@ -380,6 +322,7 @@ fun SettingsScreen(
             text = { Text("¿Estas seguro de que deseas eliminar todo el historial de conversacion?") },
             confirmButton = {
                 TextButton(onClick = {
+                    chatViewModel.deleteAllConversations()
                     showDeleteDialog = false
                 }) {
                     Text("Eliminar", color = ErrorRed)

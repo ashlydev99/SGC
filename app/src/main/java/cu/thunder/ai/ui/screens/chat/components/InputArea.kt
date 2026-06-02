@@ -48,38 +48,42 @@ fun InputArea(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp),
-            verticalAlignment = Alignment.Bottom
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Boton de respuesta rapida
             IconButton(
                 onClick = {
                     quickReplyMode = if (quickReplyMode == "quick") null else "quick"
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.FlashOn,
                     contentDescription = "Respuesta rapida",
                     tint = if (quickReplyMode == "quick") ElectricBlue else TextSecondary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(2.dp))
 
             // Boton de pensar
             IconButton(
                 onClick = {
                     quickReplyMode = if (quickReplyMode == "think") null else "think"
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Psychology,
                     contentDescription = "Pensar",
                     tint = if (quickReplyMode == "think") ElectricBlue else TextSecondary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Campo de texto
             OutlinedTextField(
@@ -92,14 +96,17 @@ fun InputArea(
                             "think" -> "Pensando paso a paso..."
                             else -> "Escribe un mensaje..."
                         },
-                        color = TextSecondary
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 40.dp, max = 120.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceMedium,
-                    unfocusedContainerColor = SurfaceMedium,
-                    focusedBorderColor = ElectricBlue,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent,
                     cursorColor = ElectricBlue,
                     focusedTextColor = TextPrimary,
@@ -107,16 +114,18 @@ fun InputArea(
                     focusedPlaceholderColor = TextSecondary,
                     unfocusedPlaceholderColor = TextSecondary
                 ),
-                maxLines = 5,
+                maxLines = 4,
                 singleLine = false,
                 textStyle = MaterialTheme.typography.bodyMedium
             )
 
-            // Boton de enviar
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Boton de enviar (mismo tamaño que los otros botones)
             IconButton(
                 onClick = { sendMessage() },
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(36.dp)
                     .background(
                         color = if (message.isNotBlank()) ElectricBlue else ButtonDisabled,
                         shape = CircleShape
@@ -126,7 +135,7 @@ fun InputArea(
                     imageVector = Icons.Default.ArrowUpward,
                     contentDescription = "Enviar",
                     tint = if (message.isNotBlank()) TextPrimary else TextSecondary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
