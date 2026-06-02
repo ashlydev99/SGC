@@ -28,96 +28,66 @@ jobs:
         with:
           api-level: 34
           build-tools: '34.0.0'
-          ndk-version: '26.1.10909125'
-          cmake-version: '3.22.1'
       
-      - name: 🔍 Verificar estructura del proyecto
+      - name: 🔍 Verificar archivos esenciales
         run: |
+          echo "=== Verificando archivos del proyecto ==="
+          
+          # Verificar settings.gradle.kts
+          if [ -f "settings.gradle.kts" ]; then
+            echo "✅ settings.gradle.kts"
+          else
+            echo "❌ ERROR: settings.gradle.kts no encontrado"
+            exit 1
+          fi
+          
+          # Verificar build.gradle.kts raíz
+          if [ -f "build.gradle.kts" ]; then
+            echo "✅ build.gradle.kts"
+          else
+            echo "❌ ERROR: build.gradle.kts no encontrado"
+            exit 1
+          fi
+          
+          # Verificar build.gradle.kts de app
+          if [ -f "app/build.gradle.kts" ]; then
+            echo "✅ app/build.gradle.kts"
+          else
+            echo "❌ ERROR: app/build.gradle.kts no encontrado"
+            exit 1
+          fi
+          
+          # Mostrar estructura
+          echo ""
           echo "=== Estructura del proyecto ==="
           ls -la
           echo ""
-          echo "=== Archivos Gradle ==="
-          find . -name "*.gradle*" -type f
-          echo ""
-          echo "=== Archivos fuente ==="
-          find . -name "*.kt" -type f | head -20
+          echo "=== Contenido de settings.gradle.kts ==="
+          cat settings.gradle.kts
       
       - name: 🛠️ Preparar Gradle Wrapper
         run: |
-          echo "=== Verificando gradlew ==="
-          
           if [ -f "gradlew" ]; then
-            echo "✅ gradlew encontrado"
             sed -i 's/\r$//' gradlew
             chmod +x gradlew
-            
-            if [ -x "gradlew" ]; then
-              echo "✅ gradlew es ejecutable"
-            else
-              echo "❌ Error: No se pudo hacer ejecutable gradlew"
-              exit 1
-            fi
+            echo "✅ gradlew listo"
           else
-            echo "❌ Error: gradlew no encontrado en la raíz"
-            echo "Buscando en subdirectorios..."
-            find . -name "gradlew" -type f
-            
-            echo "Intentando generar gradlew..."
-            if command -v gradle &> /dev/null; then
-              gradle wrapper --gradle-version 8.5
-              chmod +x gradlew
-              echo "✅ gradlew generado automáticamente"
-            else
-              echo "❌ Gradle no está instalado. No se puede generar gradlew"
-              exit 1
-            fi
-          fi
-          
-          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            JAR_SIZE=$(stat -c%s "gradle/wrapper/gradle-wrapper.jar" 2>/dev/null || echo "0")
-            echo "📦 gradle-wrapper.jar: $JAR_SIZE bytes"
-            
-            if [ "$JAR_SIZE" -lt 10000 ]; then
-              echo "⚠️  El archivo jar parece muy pequeño, podría estar corrupto"
+            echo "Generando gradlew..."
+            gradle wrapper --gradle-version 8.5 2>/dev/null || {
               echo "Descargando gradle-wrapper.jar..."
               mkdir -p gradle/wrapper
               wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
-              echo "✅ gradle-wrapper.jar descargado"
-            fi
-          else
-            echo "⚠️  gradle-wrapper.jar no encontrado, descargando..."
-            mkdir -p gradle/wrapper
-            wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
-            echo "✅ gradle-wrapper.jar descargado"
+              
+              echo "Creando gradle-wrapper.properties..."
+              echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+              echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+              echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+              echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
+              echo "validateDistributionUrl=true" >> gradle/wrapper/gradle-wrapper.properties
+              echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+              echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+            }
           fi
-          
-          if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
-            echo "⚠️  gradle-wrapper.properties no encontrado, creando..."
-            mkdir -p gradle/wrapper
-            echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-            echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-            echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-            echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
-            echo "validateDistributionUrl=true" >> gradle/wrapper/gradle-wrapper.properties
-            echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-            echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-            echo "✅ gradle-wrapper.properties creado"
-          fi
-      
-      - name: 📋 Mostrar información de compilación
-        run: |
-          echo "=== Información del sistema ==="
-          echo "SO: $(uname -a)"
-          echo "Java: $(java -version 2>&1 | head -1)"
-          echo ""
-          echo "=== SDK Android ==="
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-          ls -la $ANDROID_HOME/platforms/ 2>/dev/null || echo "No platforms"
-          ls -la $ANDROID_HOME/build-tools/ 2>/dev/null || echo "No build-tools"
-          echo ""
-          echo "=== Versión de Gradle ==="
-          ./gradlew --version 2>&1 || echo "No se pudo obtener versión"
       
       - name: 📦 Cache de dependencias
         uses: actions/cache@v3
@@ -125,13 +95,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/.android/build-cache
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      
-      - name: 🧹 Limpiar builds anteriores
-        run: ./gradlew clean --stacktrace --no-daemon
       
       - name: 🔨 Compilar APK Debug
         run: |
@@ -148,10 +114,9 @@ jobs:
           if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
             APK_SIZE=$(stat -c%s "app/build/outputs/apk/debug/app-debug.apk" 2>/dev/null || echo "0")
             APK_SIZE_MB=$(echo "scale=2; $APK_SIZE/1048576" | bc 2>/dev/null || echo "0")
-            echo "✅ APK Debug encontrada: ${APK_SIZE_MB}MB ($APK_SIZE bytes)"
+            echo "✅ APK Debug: ${APK_SIZE_MB}MB"
           else
-            echo "⚠️  No se encontró app-debug.apk, buscando otras APKs..."
-            find app/build/outputs -name "*.apk" -type f
+            echo "⚠️  APK no encontrada"
           fi
       
       - name: 📤 Subir APK Debug
@@ -160,28 +125,15 @@ jobs:
           name: ThunderAI-Debug-${{ github.run_number }}
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
-          compression-level: 9
-      
-      - name: 📤 Subir reportes de compilación
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-reports-${{ github.run_number }}
-          path: app/build/reports/
-          retention-days: 7
       
       - name: 🎉 Compilación exitosa
         if: success()
         run: |
           echo ""
-          echo "╔════════════════════════════════════════════════════════╗"
-          echo "║          ✅ APK DEBUG COMPILADA EXITOSAMENTE          ║"
-          echo "╠════════════════════════════════════════════════════════╣"
-          echo "║  📱 ThunderAI v1.0.0                                  ║"
-          echo "║  📦 Paquete: cu.thunder.ai                            ║"
-          echo "║  🔨 Build: Debug                                      ║"
-          echo "║  🏷️  Número: #${{ github.run_number }}                                ║"
-          echo "╚════════════════════════════════════════════════════════╝"
-          echo ""
-          echo "📥 Descarga la APK desde la pestaña 'Artifacts'"
-          echo ""
+          echo "╔════════════════════════════════════════╗"
+          echo "║  ✅ THUNDERAI COMPILADA CORRECTAMENTE  ║"
+          echo "╠════════════════════════════════════════╣"
+          echo "║  📱 Versión: 1.0.0                     ║"
+          echo "║  📦 Build: Debug                       ║"
+          echo "║  🏷️  Run: #${{ github.run_number }}                         ║"
+          echo "╚════════════════════════════════════════╝"
