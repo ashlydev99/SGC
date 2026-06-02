@@ -12,9 +12,11 @@ import cu.thunder.ai.ThunderAIApp
 import cu.thunder.ai.data.local.entity.Conversation
 import cu.thunder.ai.data.repository.ConversationRepository
 import cu.thunder.ai.domain.model.ChatMessage
+import cu.thunder.ai.domain.model.ModelFormat
 import cu.thunder.ai.domain.usecase.ChatUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: ConversationRepository
@@ -45,24 +47,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _modelPath = MutableStateFlow<String?>(null)
     val modelPath: StateFlow<String?> = _modelPath.asStateFlow()
 
+    private val _isModelLoaded = MutableStateFlow(false)
+    val isModelLoaded: StateFlow<Boolean> = _isModelLoaded.asStateFlow()
+
     private var currentConversationId: Long? = null
 
     init {
         val database = (application as ThunderAIApp).database
         repository = ConversationRepository(database.conversationDao())
         
-        // Cargar preferencias guardadas
         loadPreferences()
-        
-        // Cargar ultima conversacion si existe
-        viewModelScope.launch {
-            repository.getAllConversations().collect { conversations ->
-                if (conversations.isNotEmpty() && _messages.value.isEmpty()) {
-                    val lastConversation = conversations.first()
-                    loadConversation(lastConversation.id)
-                }
-            }
-        }
+        loadModelFromStorage()
     }
 
     private fun loadPreferences() {
@@ -70,6 +65,38 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _temperature.value = prefs.getFloat("temperature", 0.7f)
         _maxTokens.value = prefs.getInt("max_tokens", 2048)
         _modelPath.value = prefs.getString("model_path", null)
+    }
+
+    /**
+     * Carga el modelo guardado al iniciar la app
+     */
+    private fun loadModelFromStorage() {
+        val savedPath = _modelPath.value ?: return
+        
+        viewModelScope.launch {
+            try {
+                val modelFile = File(getApplication<Application>().filesDir, "models/$savedPath")
+                if (modelFile.exists()) {
+                    val format = if (savedPath.endsWith(".task")) ModelFormat.TASK 
+                                else if (savedPath.endsWith(".gguf")) ModelFormat.GGUF 
+                                else ModelFormat.UNKNOWN
+                    
+                    val success = chatUseCase.loadModel(modelFile.absolutePath, format)
+                    _isModelLoaded.value = success
+                    
+                    if (!success) {
+                        _modelPath.value = null
+                        prefs.edit().remove("model_path").apply()
+                    }
+                } else {
+                    // El archivo no existe, limpiar preferencia
+                    _modelPath.value = null
+                    prefs.edit().remove("model_path").apply()
+                }
+            } catch (e: Exception) {
+                _isModelLoaded.value = false
+            }
+        }
     }
 
     fun updateUserName(name: String) {
@@ -96,15 +123,41 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Carga el modelo desde una URI (cuando el usuario selecciona un archivo)
+     */
+    fun loadModelFromUri(path: String, format: ModelFormat) {
+        updateModelPath(path)
+        viewModelScope.launch {
+            try {
+                val modelFile = File(getApplication<Application>().filesDir, "models/$path")
+                if (modelFile.exists()) {
+                    _isModelLoaded.value = chatUseCase.loadModel(modelFile.absolutePath, format)
+                }
+            } catch (e: Exception) {
+                _isModelLoaded.value = false
+            }
+        }
+    }
+
     fun sendMessage(message: String) {
         if (message.isBlank() || _isGenerating.value) return
+
+        if (!_isModelLoaded.value) {
+            val errorMessage = ChatMessage(
+                content = "Error: No hay un modelo cargado. Por favor, selecciona un modelo en la configuracion.",
+                isUser = false
+            )
+            _messages.update { it + errorMessage }
+            return
+        }
 
         val userMessage = ChatMessage(
             content = message,
             isUser = true
         )
 
-        _messages.update { currentMessages -> currentMessages + userMessage }
+        _messages.update { it + userMessage }
         _isWelcomeScreen.value = false
         _isGenerating.value = true
         _currentResponse.value = ""
@@ -127,7 +180,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     isUser = false
                 )
 
-                _messages.update { currentMessages -> currentMessages + assistantMessage }
+                _messages.update { it + assistantMessage }
                 _currentResponse.value = ""
                 _isGenerating.value = false
 
@@ -137,7 +190,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     content = "Error al generar respuesta: ${e.message}",
                     isUser = false
                 )
-                _messages.update { currentMessages -> currentMessages + errorMessage }
+                _messages.update { it + errorMessage }
                 _currentResponse.value = ""
                 _isGenerating.value = false
             }
@@ -150,23 +203,24 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         val lastUserMessage = messagesList.findLast { it.isUser } ?: return
 
-        // Eliminar ultima respuesta del asistente
-        _messages.update { currentMessages ->
-            currentMessages.dropLast(1)
-        }
-        
+        _messages.update { it.dropLast(1) }
         sendMessage(lastUserMessage.content)
     }
 
     fun newConversation() {
-        viewModelScope.launch {
-            saveCurrentConversation()
-            _messages.value = emptyList()
-            _isWelcomeScreen.value = true
-            currentConversationId = null
-            _currentResponse.value = ""
-            _isGenerating.value = false
+        // Guardar conversacion actual
+        if (_messages.value.isNotEmpty()) {
+            viewModelScope.launch {
+                saveCurrentConversation()
+            }
         }
+        
+        // Limpiar TODO inmediatamente
+        _messages.value = emptyList()
+        _isWelcomeScreen.value = true
+        currentConversationId = null
+        _currentResponse.value = ""
+        _isGenerating.value = false
     }
 
     private suspend fun saveCurrentConversation() {
@@ -192,7 +246,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 currentConversationId = id
             }
         } catch (e: Exception) {
-            // Manejar error de guardado
+            // Manejar error
         }
     }
 
@@ -200,8 +254,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 repository.getConversationById(conversationId)?.let { conversation ->
-                    // Guardar conversacion actual antes de cargar otra
-                    saveCurrentConversation()
+                    // Guardar actual antes de cargar otra
+                    if (_messages.value.isNotEmpty()) {
+                        saveCurrentConversation()
+                    }
                     
                     _messages.value = conversation.messages
                     _isWelcomeScreen.value = false
@@ -209,7 +265,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     _isGenerating.value = false
                 }
             } catch (e: Exception) {
-                // Manejar error de carga
+                // Manejar error
             }
         }
     }
@@ -221,7 +277,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val clip = ClipData.newPlainText("message", content)
             clipboard.setPrimaryClip(clip)
         } catch (e: Exception) {
-            // Manejar error de copiado
+            // Manejar error
         }
     }
 
@@ -234,17 +290,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
             context.startActivity(Intent.createChooser(intent, "Compartir mensaje"))
         } catch (e: Exception) {
-            // Manejar error de compartir
+            // Manejar error
         }
     }
 
-    fun getAllConversations(): Flow<List<Conversation>> {
-        return repository.getAllConversations()
-    }
+    fun getAllConversations(): Flow<List<Conversation>> = repository.getAllConversations()
 
-    fun searchConversations(query: String): Flow<List<Conversation>> {
-        return repository.searchConversations(query)
-    }
+    fun searchConversations(query: String): Flow<List<Conversation>> = repository.searchConversations(query)
 
     fun togglePin(conversation: Conversation) {
         viewModelScope.launch {
@@ -263,7 +315,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 repository.deleteConversation(conversation)
                 if (conversation.id == currentConversationId) {
-                    newConversation()
+                    _messages.value = emptyList()
+                    _isWelcomeScreen.value = true
+                    currentConversationId = null
                 }
             } catch (e: Exception) {
                 // Manejar error
@@ -275,23 +329,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 repository.deleteAllConversations()
-                newConversation()
+                _messages.value = emptyList()
+                _isWelcomeScreen.value = true
+                currentConversationId = null
             } catch (e: Exception) {
                 // Manejar error
             }
         }
-    }
-
-    fun loadModel(path: String, format: cu.thunder.ai.domain.model.ModelFormat): Boolean {
-        return try {
-            chatUseCase.loadModel(path, format)
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    fun isModelReady(): Boolean {
-        return chatUseCase.isModelReady()
     }
 
     override fun onCleared() {
