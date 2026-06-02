@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cu.thunder.ai.ui.screens.chat.ChatViewModel
 import cu.thunder.ai.ui.theme.*
 import cu.thunder.ai.util.ModelLoader
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,8 +33,8 @@ fun SettingsScreen(
     chatViewModel: ChatViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     
-    // Obtener valores del ViewModel (que ya tiene SharedPreferences)
     val userName by chatViewModel.userName.collectAsState()
     val temperature by chatViewModel.temperature.collectAsState()
     val maxTokens by chatViewModel.maxTokens.collectAsState()
@@ -41,6 +42,7 @@ fun SettingsScreen(
     
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
     val isModelLoaded = modelPath != null
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -49,8 +51,18 @@ fun SettingsScreen(
         uri?.let {
             val fileName = uri.lastPathSegment ?: "model.bin"
             chatViewModel.updateModelPath(fileName)
-            // Copiar modelo a almacenamiento interno
-            ModelLoader.loadModel(context, uri)
+            
+            // CORREGIDO: Usar coroutine para función suspend
+            scope.launch {
+                isLoading = true
+                try {
+                    ModelLoader.loadModel(context, uri)
+                } catch (e: Exception) {
+                    // Manejar error
+                } finally {
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -159,6 +171,14 @@ fun SettingsScreen(
                         )
                     }
 
+                    if (isLoading) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = ElectricBlue
+                        )
+                    }
+
                     if (modelPath != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -172,11 +192,12 @@ fun SettingsScreen(
                     Button(
                         onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue)
                     ) {
                         Icon(Icons.Default.FolderOpen, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Seleccionar modelo")
+                        Text(if (isLoading) "Cargando..." else "Seleccionar modelo")
                     }
                 }
             }
