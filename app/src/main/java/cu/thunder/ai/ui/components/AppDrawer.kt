@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import cu.thunder.ai.data.local.entity.Conversation
-import cu.thunder.ai.data.repository.ConversationRepository
 import cu.thunder.ai.ui.screens.chat.ChatViewModel
 import cu.thunder.ai.ui.theme.*
 import kotlinx.coroutines.launch
@@ -29,12 +28,11 @@ fun AppDrawer(
     viewModel: ChatViewModel,
     onCloseDrawer: () -> Unit
 ) {
-    val conversations by viewModel.getAllConversations().collectAsStateWithLifecycle(initial = emptyList())
+    val conversations by viewModel.getAllConversations().collectAsStateWithLifecycle(initialValue = emptyList())
     var searchQuery by remember { mutableStateOf("") }
-    var filteredConversations by remember { mutableStateOf<List<Conversation>>(emptyList()) }
-
-    LaunchedEffect(searchQuery, conversations) {
-        filteredConversations = if (searchQuery.isBlank()) {
+    
+    val filteredConversations = remember(conversations, searchQuery) {
+        if (searchQuery.isBlank()) {
             conversations
         } else {
             conversations.filter {
@@ -85,7 +83,7 @@ fun AppDrawer(
             )
         }
 
-        // B煤squeda
+        // Búsqueda
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -103,11 +101,12 @@ fun AppDrawer(
                 .fillMaxWidth()
                 .padding(16.dp),
             singleLine = true,
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                textColor = TextPrimary,
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = ElectricBlue,
                 unfocusedBorderColor = SurfaceMedium,
-                cursorColor = ElectricBlue
+                cursorColor = ElectricBlue,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
             )
         )
 
@@ -118,26 +117,22 @@ fun AppDrawer(
             if (pinnedConversations.isNotEmpty()) {
                 item {
                     Text(
-                        text = "馃搶 Fijados",
+                        text = "📌 Fijados",
                         style = MaterialTheme.typography.labelLarge,
                         color = ElectricBlue,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
 
-                items(pinnedConversations) { conversation ->
+                items(pinnedConversations, key = { it.id }) { conversation ->
                     ConversationItem(
                         conversation = conversation,
                         onClick = {
                             viewModel.loadConversation(conversation.id)
                             onCloseDrawer()
                         },
-                        onTogglePin = {
-                            viewModel.togglePin(conversation)
-                        },
-                        onDelete = {
-                            viewModel.deleteConversation(conversation)
-                        }
+                        onTogglePin = { viewModel.togglePin(conversation) },
+                        onDelete = { viewModel.deleteConversation(conversation) }
                     )
                 }
             }
@@ -151,26 +146,21 @@ fun AppDrawer(
                 )
             }
 
-            items(recentConversations) { conversation ->
+            items(recentConversations, key = { it.id }) { conversation ->
                 ConversationItem(
                     conversation = conversation,
                     onClick = {
                         viewModel.loadConversation(conversation.id)
                         onCloseDrawer()
                     },
-                    onTogglePin = {
-                        viewModel.togglePin(conversation)
-                    },
-                    onDelete = {
-                        viewModel.deleteConversation(conversation)
-                    }
+                    onTogglePin = { viewModel.togglePin(conversation) },
+                    onDelete = { viewModel.deleteConversation(conversation) }
                 )
             }
 
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Bot贸n Nueva conversaci贸n
                 OutlinedButton(
                     onClick = {
                         viewModel.newConversation()
@@ -189,15 +179,14 @@ fun AppDrawer(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Nueva conversaci贸n")
+                    Text("Nueva conversacion")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Bot贸n de configuraci贸n al final
             item {
-                Divider(color = SurfaceMedium)
+                HorizontalDivider(color = SurfaceMedium)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -210,13 +199,13 @@ fun AppDrawer(
                 ) {
                     Icon(
                         Icons.Default.Settings,
-                        contentDescription = "Configuraci贸n",
+                        contentDescription = "Configuracion",
                         tint = TextSecondary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "Configuraci贸n",
+                        text = "Configuracion",
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextPrimary
                     )
@@ -274,7 +263,7 @@ private fun ConversationItem(
                     Icon(
                         Icons.Default.PushPin,
                         contentDescription = if (conversation.isPinned) "Desfijar" else "Fijar",
-                        tint = if (conversation.isPinned) PinYellow else TextSecondary,
+                        tint = if (conversation.isPinned) ElectricBlue else TextSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }

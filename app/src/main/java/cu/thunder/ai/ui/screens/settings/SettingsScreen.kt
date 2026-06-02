@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -16,11 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cu.thunder.ai.ui.theme.*
-import cu.thunder.ai.ui.util.ModelLoader
+import cu.thunder.ai.util.ModelLoader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,13 +35,15 @@ fun SettingsScreen(
     var modelPath by remember { mutableStateOf<String?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var isModelLoaded by remember { mutableStateOf(false) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            ModelLoader.loadModel(context, uri)
-            modelPath = uri.lastPathSegment
+            val fileName = uri.lastPathSegment ?: "model.bin"
+            modelPath = fileName
+            isModelLoaded = true
         }
     }
 
@@ -49,7 +52,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Configuración",
+                        "Configuracion",
                         color = ElectricBlue
                     )
                 },
@@ -72,12 +75,20 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundGradient.VerticalGradient)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            BattleNetDark,
+                            SurfaceDark,
+                            SurfaceMedium.copy(alpha = 0.3f)
+                        )
+                    )
+                )
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Sección de Perfil
+            // Seccion de Perfil
             Text(
                 "Perfil",
                 style = MaterialTheme.typography.titleLarge,
@@ -133,7 +144,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sección de Modelo
+            // Seccion de Modelo
             Text(
                 "Modelo de IA",
                 style = MaterialTheme.typography.titleLarge,
@@ -158,16 +169,16 @@ fun SettingsScreen(
                                 color = TextSecondary
                             )
                             Text(
-                                if (modelPath != null) "Cargado" else "No cargado",
+                                if (isModelLoaded) "Cargado" else "No cargado",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (modelPath != null) SuccessGreen else ErrorRed
+                                color = if (isModelLoaded) SuccessGreen else ErrorRed
                             )
                         }
                         Icon(
-                            if (modelPath != null) Icons.Default.CheckCircle
+                            if (isModelLoaded) Icons.Default.CheckCircle
                             else Icons.Default.Error,
                             contentDescription = null,
-                            tint = if (modelPath != null) SuccessGreen else ErrorRed
+                            tint = if (isModelLoaded) SuccessGreen else ErrorRed
                         )
                     }
 
@@ -202,9 +213,9 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sección de Parámetros
+            // Seccion de Parametros
             Text(
-                "Parámetros de generación",
+                "Parametros de generacion",
                 style = MaterialTheme.typography.titleLarge,
                 color = ElectricBlue
             )
@@ -226,14 +237,15 @@ fun SettingsScreen(
                         valueRange = 0.1f..1.5f,
                         colors = SliderDefaults.colors(
                             thumbColor = ElectricBlue,
-                            activeTrackColor = ElectricBlue
+                            activeTrackColor = ElectricBlue,
+                            inactiveTrackColor = SurfaceMedium
                         )
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        "Máximo de tokens: $maxTokens",
+                        "Maximo de tokens: $maxTokens",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
@@ -241,10 +253,10 @@ fun SettingsScreen(
                         value = maxTokens.toFloat(),
                         onValueChange = { maxTokens = it.toInt() },
                         valueRange = 256f..4096f,
-                        steps = 14,
                         colors = SliderDefaults.colors(
                             thumbColor = ElectricBlue,
-                            activeTrackColor = ElectricBlue
+                            activeTrackColor = ElectricBlue,
+                            inactiveTrackColor = SurfaceMedium
                         )
                     )
                 }
@@ -252,7 +264,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sección de Ayuda
+            // Seccion de Ayuda
             Text(
                 "Ayuda",
                 style = MaterialTheme.typography.titleLarge,
@@ -288,7 +300,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón de limpiar historial
+            // Boton de limpiar historial
             OutlinedButton(
                 onClick = { showDeleteDialog = true },
                 modifier = Modifier.fillMaxWidth(),
@@ -321,7 +333,7 @@ fun SettingsScreen(
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "Versión 1.0.0",
+                    text = "Version 1.0.0",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     textAlign = TextAlign.Center
@@ -330,17 +342,18 @@ fun SettingsScreen(
         }
     }
 
-    // Diálogo para editar nombre
+    // Dialogo para editar nombre
     if (showEditDialog) {
         var newName by remember { mutableStateOf(userName) }
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             title = { Text("Editar nombre") },
             text = {
-                TextField(
+                OutlinedTextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    placeholder = { Text("Ingresa tu nombre") }
+                    placeholder = { Text("Ingresa tu nombre") },
+                    singleLine = true
                 )
             },
             confirmButton = {
@@ -359,12 +372,12 @@ fun SettingsScreen(
         )
     }
 
-    // Diálogo para confirmar eliminación
+    // Dialogo para confirmar eliminacion
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Limpiar historial") },
-            text = { Text("¿Estás seguro de que deseas eliminar todo el historial de conversación?") },
+            text = { Text("¿Estas seguro de que deseas eliminar todo el historial de conversacion?") },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false

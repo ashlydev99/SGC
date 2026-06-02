@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -82,7 +84,7 @@ fun ChatScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
-                                contentDescription = "Menú",
+                                contentDescription = "Menu",
                                 tint = TextPrimary
                             )
                         }
@@ -94,7 +96,7 @@ fun ChatScreen(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Nueva conversación",
+                                contentDescription = "Nueva conversacion",
                                 tint = ElectricBlue
                             )
                         }
@@ -111,7 +113,7 @@ fun ChatScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        brush = Brush.verticalGradient(
                             colors = listOf(
                                 BattleNetDark,
                                 SurfaceDark,
@@ -184,7 +186,7 @@ fun ChatScreen(
                     }
                 }
 
-                // Área de input fija en la parte inferior
+                // Area de input fija en la parte inferior
                 InputArea(
                     onSendMessage = { message ->
                         viewModel.sendMessage(message)

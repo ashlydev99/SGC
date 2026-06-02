@@ -1,7 +1,6 @@
 package cu.thunder.ai.ui.screens.chat.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cu.thunder.ai.ui.theme.*
 
 @Composable
@@ -45,10 +43,7 @@ fun InputArea(
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
             containerColor = SurfaceMedium
-        ),
-        border = if (isFocused) 
-            androidx.compose.foundation.BorderStroke(2.dp, ElectricBlue) 
-        else null
+        )
     ) {
         Row(
             modifier = Modifier
@@ -56,7 +51,6 @@ fun InputArea(
                 .padding(4.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Botones de modo
             IconButton(
                 onClick = {
                     quickReplyMode = if (quickReplyMode == "quick") null else "quick"
@@ -65,7 +59,7 @@ fun InputArea(
             ) {
                 Icon(
                     imageVector = Icons.Default.FlashOn,
-                    contentDescription = "Respuesta rápida",
+                    contentDescription = "Respuesta rapida",
                     tint = if (quickReplyMode == "quick") ElectricBlue else TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -85,16 +79,13 @@ fun InputArea(
                 )
             }
 
-            // Campo de texto
-            TextField(
+            OutlinedTextField(
                 value = message,
-                onValueChange = { 
-                    if (it.length <= 500) message = it 
-                },
+                onValueChange = { message = it },
                 placeholder = {
                     Text(
                         text = when (quickReplyMode) {
-                            "quick" -> "Respuesta rápida..."
+                            "quick" -> "Respuesta rapida..."
                             "think" -> "Pensando paso a paso..."
                             else -> "Escribe un mensaje..."
                         },
@@ -102,39 +93,34 @@ fun InputArea(
                     )
                 },
                 modifier = Modifier.weight(1f),
-                colors = TextFieldDefaults.colors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = SurfaceMedium,
                     unfocusedContainerColor = SurfaceMedium,
-                    focusedIndicatorColor = ElectricBlue,
-                    unfocusedIndicatorColor = SurfaceMedium,
+                    focusedBorderColor = ElectricBlue,
+                    unfocusedBorderColor = Color.Transparent,
                     cursorColor = ElectricBlue,
                     focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    unfocusedTextColor = TextPrimary,
+                    focusedPlaceholderColor = TextSecondary,
+                    unfocusedPlaceholderColor = TextSecondary
                 ),
                 maxLines = 5,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 16.sp
-                ),
-                onFocusChange = { isFocused = it }
+                singleLine = false
             )
 
-            // Botón de enviar
             IconButton(
                 onClick = { sendMessage() },
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        color = if (message.isNotBlank()) ElectricBlue else TextSecondary.copy(alpha = 0.3f),
+                        color = if (message.isNotBlank()) ElectricBlue else ButtonDisabled,
                         shape = CircleShape
                     )
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowUpward,
                     contentDescription = "Enviar",
-                    tint = if (message.isNotBlank()) 
-                        TextPrimary 
-                    else 
-                        TextSecondary,
+                    tint = if (message.isNotBlank()) TextPrimary else TextSecondary,
                     modifier = Modifier.size(24.dp)
                 )
             }

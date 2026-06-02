@@ -11,7 +11,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import cu.thunder.ai.domain.model.ChatMessage
 import cu.thunder.ai.ui.theme.*
-import cu.thunder.ai.ui.util.MarkdownText
+import cu.thunder.ai.util.MarkdownText
 import java.text.SimpleDateFormat
 import java.util.*
 
