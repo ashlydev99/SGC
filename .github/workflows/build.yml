@@ -1,153 +1,103 @@
 name: Compilar APK ThunderAI
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [ main, master ]
+  workflow_dispatch:  # Ejecución manual desde GitHub
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout codigo
+      # 1. Clonar el repositorio
+      - name: Checkout código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
+      # 2. Configurar Java 17
       - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-          
+      
+      # 3. Configurar Android SDK
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          build-tools: '34.0.0'
+          packages: |
+            platforms;android-35
+            build-tools;35.0.0
+            platform-tools
+          api-level: 35
+          build-tools: 35.0.0
       
-      - name: Verificar archivos del proyecto
+      # 4. Aceptar licencias de Android
+      - name: Aceptar licencias de Android
         run: |
-          echo "=== Directorio actual ==="
-          pwd
-          echo ""
-          echo "=== Archivos en raiz ==="
-          ls -la
-          echo ""
-          
-          if [ ! -f "settings.gradle.kts" ]; then
-            echo "Creando settings.gradle.kts..."
-            echo 'pluginManagement {' > settings.gradle.kts
-            echo '    repositories {' >> settings.gradle.kts
-            echo '        google()' >> settings.gradle.kts
-            echo '        mavenCentral()' >> settings.gradle.kts
-            echo '        gradlePluginPortal()' >> settings.gradle.kts
-            echo '    }' >> settings.gradle.kts
-            echo '}' >> settings.gradle.kts
-            echo '' >> settings.gradle.kts
-            echo 'dependencyResolutionManagement {' >> settings.gradle.kts
-            echo '    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)' >> settings.gradle.kts
-            echo '    repositories {' >> settings.gradle.kts
-            echo '        google()' >> settings.gradle.kts
-            echo '        mavenCentral()' >> settings.gradle.kts
-            echo '    }' >> settings.gradle.kts
-            echo '}' >> settings.gradle.kts
-            echo '' >> settings.gradle.kts
-            echo 'rootProject.name = "ThunderAI"' >> settings.gradle.kts
-            echo 'include(":app")' >> settings.gradle.kts
-            echo "Creado settings.gradle.kts"
-          fi
-          
-          if [ ! -f "build.gradle.kts" ]; then
-            echo "Creando build.gradle.kts..."
-            echo 'plugins {' > build.gradle.kts
-            echo '    id("com.android.application") version "8.2.0" apply false' >> build.gradle.kts
-            echo '    id("org.jetbrains.kotlin.android") version "1.9.20" apply false' >> build.gradle.kts
-            echo '    id("com.google.devtools.ksp") version "1.9.20-1.0.14" apply false' >> build.gradle.kts
-            echo '}' >> build.gradle.kts
-            echo "Creado build.gradle.kts"
-          fi
-          
-          if [ ! -f "gradle.properties" ]; then
-            echo "Creando gradle.properties..."
-            echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" > gradle.properties
-            echo "android.useAndroidX=true" >> gradle.properties
-            echo "kotlin.code.style=official" >> gradle.properties
-            echo "android.nonTransitiveRClass=true" >> gradle.properties
-            echo "Creado gradle.properties"
-          fi
+          yes | sdkmanager --licenses || true
       
-      - name: Configurar Gradle Wrapper
-        run: |
-          mkdir -p gradle/wrapper
-          
-          echo "Descargando gradle-wrapper.jar..."
-          wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar" -O gradle/wrapper/gradle-wrapper.jar
-          
-          echo "Creando gradle-wrapper.properties..."
-          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-          echo "networkTimeout=10000" >> gradle/wrapper/gradle-wrapper.properties
-          echo "validateDistributionUrl=true" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          
-          if [ -f "gradlew" ]; then
-            sed -i 's/\r$//' gradlew
-            chmod +x gradlew
-          else
-            echo '#!/bin/sh' > gradlew
-            echo 'SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"' >> gradlew
-            echo 'exec java -classpath "$SCRIPT_DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
-            chmod +x gradlew
-          fi
-          
-          echo "Gradle Wrapper configurado"
+      # 5. Dar permisos de ejecución a gradlew
+      - name: Dar permisos a gradlew
+        run: chmod +x gradlew
       
-      - name: Cache de dependencias
+      # 6. Cache de Gradle para acelerar compilaciones
+      - name: Cache de Gradle
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       
+      # 7. Cache del SDK de Android
+      - name: Cache de Android SDK
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.android/build-cache
+            ~/.android/cache
+          key: ${{ runner.os }}-android-cache
+      
+      # 8. Compilar APK de Debug
       - name: Compilar APK Debug
-        run: |
-          echo "=== Iniciando compilacion ==="
-          ./gradlew assembleDebug --no-daemon --stacktrace --build-cache
-          echo "=== Compilacion completada ==="
-        timeout-minutes: 30
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
       
-      - name: Verificar APK
-        run: |
-          echo "=== Buscando APK ==="
-          find . -name "*.apk" -type f 2>/dev/null
-          
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            ls -lh app/build/outputs/apk/debug/app-debug.apk
-            echo "APK generada correctamente"
-          else
-            echo "APK no encontrada en ruta esperada"
-            find . -name "*.apk" -type f
-          fi
+      # 9. Compilar APK de Release (opcional)
+      - name: Compilar APK Release
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        continue-on-error: true  # No falla si no hay keystore configurado
       
-      - name: Subir APK
+      # 10. Subir APK Debug como artefacto
+      - name: Subir APK Debug
         uses: actions/upload-artifact@v4
         with:
           name: ThunderAI-Debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
       
-      - name: Compilacion exitosa
-        if: success()
-        run: |
-          echo ""
-          echo "============================================"
-          echo "  THUNDERAI COMPILADA CORRECTAMENTE"
-          echo "============================================"
-          echo "  Version: 1.0.0"
-          echo "  Build: Debug"
-          echo "============================================"
+      # 11. Subir APK Release como artefacto (si existe)
+      - name: Subir APK Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ThunderAI-Release
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+      
+      # 12. Subir reporte de compilación
+      - name: Subir logs de compilación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            app/build/reports/
+            app/build/outputs/logs/
+          retention-days: 7
+      
+      # 13. Limpiar cache de Gradle al finalizar
+      - name: Limpiar cache de Gradle
+        run: rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
