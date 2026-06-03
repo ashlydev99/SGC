@@ -81,28 +81,110 @@ jobs:
           echo '}' >> app/src/main/cpp/llama_jni.cpp
       
       - name: Clonar llama.cpp
-        run: git clone --depth 1 --branch b4464 https://github.com/ggerganov/llama.cpp.git /tmp/llama.cpp
+        run: git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /tmp/llama.cpp
       
-      - name: Compilar llama.cpp + JNI
+      - name: Compilar llama.cpp + JNI para armeabi-v7a
         run: |
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-          declare -A TARGETS
-          TARGETS[arm64-v8a]="aarch64-linux-android26"
-          TARGETS[armeabi-v7a]="armv7a-linux-androideabi26"
-          TARGETS[x86_64]="x86_64-linux-android26"
           
-          for ABI in "${!TARGETS[@]}"; do
-            TARGET="${TARGETS[$ABI]}"
-            echo "Compilando para $ABI..."
-            BUILD_DIR="/tmp/llama.cpp/build_$ABI"
-            mkdir -p "$BUILD_DIR"
-            cd "$BUILD_DIR"
-            cmake /tmp/llama.cpp -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-26 -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_SERVER=OFF -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-            cmake --build . --config Release --target llama -j$(nproc)
-            $TOOLCHAIN/bin/$TARGET-clang++ -std=c++17 -shared -fPIC -I/tmp/llama.cpp "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" "$BUILD_DIR/libllama.a" "$BUILD_DIR/ggml/src/libggml.a" -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" -llog -landroid -lm
-            cd "$GITHUB_WORKSPACE"
-            echo "✅ $ABI compilado"
-          done
+          echo "=== COMPILANDO PARA armeabi-v7a (32-bit) ==="
+          ABI="armeabi-v7a"
+          TARGET="armv7a-linux-androideabi26"
+          BUILD_DIR="/tmp/llama.cpp/build_$ABI"
+          
+          mkdir -p "$BUILD_DIR"
+          cd "$BUILD_DIR"
+          
+          # Configurar cmake con flags para evitar SIMD problemático
+          cmake /tmp/llama.cpp \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI \
+            -DANDROID_PLATFORM=android-26 \
+            -DANDROID_ARM_NEON=OFF \
+            -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_SERVER=OFF \
+            -DLLAMA_CURL=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_C_FLAGS="-march=armv7-a" \
+            -DCMAKE_CXX_FLAGS="-march=armv7-a" \
+            -DGGML_NO_LLAMAFILE=ON
+          
+          # Compilar
+          cmake --build . --config Release --target llama -j$(nproc) 2>&1 | tail -20
+          
+          # Compilar JNI y linkear
+          echo "Linkeando JNI..."
+          $TOOLCHAIN/bin/$TARGET-clang++ \
+            -std=c++17 \
+            -shared \
+            -fPIC \
+            -march=armv7-a \
+            -I/tmp/llama.cpp \
+            "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" \
+            "$BUILD_DIR/libllama.a" \
+            "$BUILD_DIR/ggml/src/libggml.a" \
+            "$BUILD_DIR/ggml/src/libggml-base.a" \
+            "$BUILD_DIR/ggml/src/libggml-cpu.a" \
+            -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" \
+            -llog -landroid -lm -lomp -static-openmp
+          
+          if [ -f "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" ]; then
+            echo "✅ armeabi-v7a compilado"
+            ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so"
+          else
+            echo "❌ Fallo armeabi-v7a"
+          fi
+          
+          cd "$GITHUB_WORKSPACE"
+      
+      - name: Compilar llama.cpp + JNI para arm64-v8a
+        run: |
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          
+          echo "=== COMPILANDO PARA arm64-v8a (64-bit) ==="
+          ABI="arm64-v8a"
+          TARGET="aarch64-linux-android26"
+          BUILD_DIR="/tmp/llama.cpp/build_$ABI"
+          
+          mkdir -p "$BUILD_DIR"
+          cd "$BUILD_DIR"
+          
+          cmake /tmp/llama.cpp \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI \
+            -DANDROID_PLATFORM=android-26 \
+            -DANDROID_ARM_NEON=ON \
+            -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_SERVER=OFF \
+            -DLLAMA_CURL=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF
+          
+          cmake --build . --config Release --target llama -j$(nproc) 2>&1 | tail -10
+          
+          echo "Linkeando JNI..."
+          $TOOLCHAIN/bin/$TARGET-clang++ \
+            -std=c++17 \
+            -shared \
+            -fPIC \
+            -I/tmp/llama.cpp \
+            "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" \
+            "$BUILD_DIR/libllama.a" \
+            "$BUILD_DIR/ggml/src/libggml.a" \
+            "$BUILD_DIR/ggml/src/libggml-base.a" \
+            "$BUILD_DIR/ggml/src/libggml-cpu.a" \
+            -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so" \
+            -llog -landroid -lm
+          
+          if [ -f "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so" ]; then
+            echo "✅ arm64-v8a compilado"
+            ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so"
+          fi
+          
+          cd "$GITHUB_WORKSPACE"
       
       - name: Instalar Gradle 8.5
         run: |
