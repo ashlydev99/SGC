@@ -27,12 +27,12 @@ jobs:
         run: yes | sdkmanager --licenses || true
       
       - name: Instalar dependencias del sistema
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq cmake ninja-build
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq cmake ninja-build make
       
-      - name: Configurar NDK
+      - name: Configurar NDK 25 (compatible con armeabi-v7a)
         run: |
-          sdkmanager "ndk;26.1.10909125" 2>/dev/null || true
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+          sdkmanager "ndk;25.2.9519653" 2>/dev/null || true
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
       
       - name: Crear estructura de directorios
         run: |
@@ -58,100 +58,38 @@ jobs:
         run: |
           echo '#include <jni.h>' > app/src/main/cpp/llama_jni.cpp
           echo '#include <string>' >> app/src/main/cpp/llama_jni.cpp
-          echo '#include <cstring>' >> app/src/main/cpp/llama_jni.cpp
           echo '#include <vector>' >> app/src/main/cpp/llama_jni.cpp
           echo '#include "llama.h"' >> app/src/main/cpp/llama_jni.cpp
-          echo '' >> app/src/main/cpp/llama_jni.cpp
           echo 'struct LlamaContext { llama_model* model; llama_context* ctx; bool is_loaded; };' >> app/src/main/cpp/llama_jni.cpp
-          echo '' >> app/src/main/cpp/llama_jni.cpp
-          echo 'extern "C" JNIEXPORT jlong JNICALL Java_cu_thunder_ai_llama_LlamaNative_loadModel(JNIEnv* env, jclass clazz, jstring modelPath) {' >> app/src/main/cpp/llama_jni.cpp
-          echo '    const char* path = env->GetStringUTFChars(modelPath, nullptr);' >> app/src/main/cpp/llama_jni.cpp
-          echo '    llama_backend_init();' >> app/src/main/cpp/llama_jni.cpp
-          echo '    llama_model_params model_params = llama_model_default_params();' >> app/src/main/cpp/llama_jni.cpp
-          echo '    model_params.n_gpu_layers = 0;' >> app/src/main/cpp/llama_jni.cpp
-          echo '    llama_model* model = llama_load_model_from_file(path, model_params);' >> app/src/main/cpp/llama_jni.cpp
-          echo '    if (!model) { env->ReleaseStringUTFChars(modelPath, path); return 0; }' >> app/src/main/cpp/llama_jni.cpp
-          echo '    llama_context_params ctx_params = llama_context_default_params();' >> app/src/main/cpp/llama_jni.cpp
-          echo '    ctx_params.n_ctx = 2048; ctx_params.n_batch = 512; ctx_params.n_threads = 4;' >> app/src/main/cpp/llama_jni.cpp
-          echo '    llama_context* ctx = llama_new_context_with_model(model, ctx_params);' >> app/src/main/cpp/llama_jni.cpp
-          echo '    if (!ctx) { llama_free_model(model); env->ReleaseStringUTFChars(modelPath, path); return 0; }' >> app/src/main/cpp/llama_jni.cpp
-          echo '    LlamaContext* llamaCtx = new LlamaContext{model, ctx, true};' >> app/src/main/cpp/llama_jni.cpp
-          echo '    env->ReleaseStringUTFChars(modelPath, path);' >> app/src/main/cpp/llama_jni.cpp
-          echo '    return reinterpret_cast<jlong>(llamaCtx);' >> app/src/main/cpp/llama_jni.cpp
+          echo 'extern "C" JNIEXPORT jlong JNICALL Java_cu_thunder_ai_llama_LlamaNative_loadModel(JNIEnv* env, jclass c, jstring p) {' >> app/src/main/cpp/llama_jni.cpp
+          echo '  const char* path = env->GetStringUTFChars(p, 0);' >> app/src/main/cpp/llama_jni.cpp
+          echo '  llama_backend_init();' >> app/src/main/cpp/llama_jni.cpp
+          echo '  llama_model_params mp = llama_model_default_params();' >> app/src/main/cpp/llama_jni.cpp
+          echo '  llama_model* m = llama_load_model_from_file(path, mp);' >> app/src/main/cpp/llama_jni.cpp
+          echo '  if(!m){ env->ReleaseStringUTFChars(p,path); return 0; }' >> app/src/main/cpp/llama_jni.cpp
+          echo '  llama_context_params cp = llama_context_default_params();' >> app/src/main/cpp/llama_jni.cpp
+          echo '  cp.n_ctx=2048; cp.n_threads=4;' >> app/src/main/cpp/llama_jni.cpp
+          echo '  llama_context* ctx = llama_new_context_with_model(m, cp);' >> app/src/main/cpp/llama_jni.cpp
+          echo '  if(!ctx){ llama_free_model(m); env->ReleaseStringUTFChars(p,path); return 0; }' >> app/src/main/cpp/llama_jni.cpp
+          echo '  env->ReleaseStringUTFChars(p,path);' >> app/src/main/cpp/llama_jni.cpp
+          echo '  return reinterpret_cast<jlong>(new LlamaContext{m,ctx,true});' >> app/src/main/cpp/llama_jni.cpp
           echo '}' >> app/src/main/cpp/llama_jni.cpp
       
       - name: Clonar llama.cpp
         run: git clone --depth 1 https://github.com/ggerganov/llama.cpp.git /tmp/llama.cpp
       
-      - name: Compilar llama.cpp + JNI para armeabi-v7a
+      - name: Compilar para armeabi-v7a
         run: |
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-          
-          echo "=== COMPILANDO PARA armeabi-v7a (32-bit) ==="
           ABI="armeabi-v7a"
           TARGET="armv7a-linux-androideabi26"
           BUILD_DIR="/tmp/llama.cpp/build_$ABI"
           
-          mkdir -p "$BUILD_DIR"
-          cd "$BUILD_DIR"
-          
-          # Configurar cmake con flags para evitar SIMD problemático
-          cmake /tmp/llama.cpp \
-            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=$ABI \
-            -DANDROID_PLATFORM=android-26 \
-            -DANDROID_ARM_NEON=OFF \
-            -DLLAMA_BUILD_EXAMPLES=OFF \
-            -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_SERVER=OFF \
-            -DLLAMA_CURL=OFF \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_C_FLAGS="-march=armv7-a" \
-            -DCMAKE_CXX_FLAGS="-march=armv7-a" \
-            -DGGML_NO_LLAMAFILE=ON
-          
-          # Compilar
-          cmake --build . --config Release --target llama -j$(nproc) 2>&1 | tail -20
-          
-          # Compilar JNI y linkear
-          echo "Linkeando JNI..."
-          $TOOLCHAIN/bin/$TARGET-clang++ \
-            -std=c++17 \
-            -shared \
-            -fPIC \
-            -march=armv7-a \
-            -I/tmp/llama.cpp \
-            "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" \
-            "$BUILD_DIR/libllama.a" \
-            "$BUILD_DIR/ggml/src/libggml.a" \
-            "$BUILD_DIR/ggml/src/libggml-base.a" \
-            "$BUILD_DIR/ggml/src/libggml-cpu.a" \
-            -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" \
-            -llog -landroid -lm -lomp -static-openmp
-          
-          if [ -f "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" ]; then
-            echo "✅ armeabi-v7a compilado"
-            ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so"
-          else
-            echo "❌ Fallo armeabi-v7a"
-          fi
-          
-          cd "$GITHUB_WORKSPACE"
-      
-      - name: Compilar llama.cpp + JNI para arm64-v8a
-        run: |
-          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-          
-          echo "=== COMPILANDO PARA arm64-v8a (64-bit) ==="
-          ABI="arm64-v8a"
-          TARGET="aarch64-linux-android26"
-          BUILD_DIR="/tmp/llama.cpp/build_$ABI"
-          
-          mkdir -p "$BUILD_DIR"
-          cd "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
           
           cmake /tmp/llama.cpp \
+            -G "Unix Makefiles" \
+            -DCMAKE_MAKE_PROGRAM=make \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=$ABI \
             -DANDROID_PLATFORM=android-26 \
@@ -161,15 +99,52 @@ jobs:
             -DLLAMA_BUILD_SERVER=OFF \
             -DLLAMA_CURL=OFF \
             -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_C_FLAGS="-mfloat-abi=softfp -mfpu=neon" \
+            -DCMAKE_CXX_FLAGS="-mfloat-abi=softfp -mfpu=neon"
+          
+          make llama -j$(nproc) 2>&1 | tail -5
+          
+          $TOOLCHAIN/bin/$TARGET-clang++ \
+            -std=c++17 -shared -fPIC -mfloat-abi=softfp -mfpu=neon \
+            -I/tmp/llama.cpp \
+            "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" \
+            "$BUILD_DIR/libllama.a" \
+            "$BUILD_DIR/ggml/src/libggml.a" \
+            "$BUILD_DIR/ggml/src/libggml-base.a" \
+            "$BUILD_DIR/ggml/src/libggml-cpu.a" \
+            -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so" \
+            -llog -landroid -lm
+          
+          ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/$ABI/libllama.so"
+          cd "$GITHUB_WORKSPACE"
+      
+      - name: Compilar para arm64-v8a
+        run: |
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          ABI="arm64-v8a"
+          TARGET="aarch64-linux-android26"
+          BUILD_DIR="/tmp/llama.cpp/build_$ABI"
+          
+          mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+          
+          cmake /tmp/llama.cpp \
+            -G "Unix Makefiles" \
+            -DCMAKE_MAKE_PROGRAM=make \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI \
+            -DANDROID_PLATFORM=android-26 \
+            -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_SERVER=OFF \
+            -DLLAMA_CURL=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF
           
-          cmake --build . --config Release --target llama -j$(nproc) 2>&1 | tail -10
+          make llama -j$(nproc) 2>&1 | tail -5
           
-          echo "Linkeando JNI..."
           $TOOLCHAIN/bin/$TARGET-clang++ \
-            -std=c++17 \
-            -shared \
-            -fPIC \
+            -std=c++17 -shared -fPIC \
             -I/tmp/llama.cpp \
             "$GITHUB_WORKSPACE/app/src/main/cpp/llama_jni.cpp" \
             "$BUILD_DIR/libllama.a" \
@@ -179,11 +154,7 @@ jobs:
             -o "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so" \
             -llog -landroid -lm
           
-          if [ -f "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so" ]; then
-            echo "✅ arm64-v8a compilado"
-            ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so"
-          fi
-          
+          ls -lh "$GITHUB_WORKSPACE/app/src/main/jniLibs/arm64-v8a/libllama.so"
           cd "$GITHUB_WORKSPACE"
       
       - name: Instalar Gradle 8.5
