@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import cu.thunder.ai.ThunderAIApp
@@ -78,18 +79,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 if (modelFile.exists()) {
                     val format = ModelLoader.detectFormat(modelFile.name)
                     if (format == ModelFormat.TASK) {
+                        Log.d("ThunderAI", "Cargando modelo guardado: ${modelFile.absolutePath}")
                         val success = chatUseCase.loadModel(modelFile.absolutePath, format)
                         _isModelLoaded.value = success
+                        
                         if (!success) {
                             _modelPath.value = null
                             prefs.edit().remove("model_path").apply()
                         }
                     }
                 } else {
+                    Log.w("ThunderAI", "Archivo de modelo no encontrado: ${modelFile.absolutePath}")
                     _modelPath.value = null
                     prefs.edit().remove("model_path").apply()
                 }
             } catch (e: Exception) {
+                Log.e("ThunderAI", "Error cargando modelo: ${e.message}")
                 _isModelLoaded.value = false
             }
         }
@@ -125,8 +130,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch {
             try {
+                Log.d("ThunderAI", "Cargando modelo desde archivo: ${modelFile.absolutePath}")
                 _isModelLoaded.value = chatUseCase.loadModel(modelFile.absolutePath, format)
             } catch (e: Exception) {
+                Log.e("ThunderAI", "Error: ${e.message}")
                 _isModelLoaded.value = false
             }
         }
@@ -258,9 +265,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun togglePin(conversation: Conversation) {
         viewModelScope.launch {
-            try {
-                repository.updateConversation(conversation.copy(isPinned = !conversation.isPinned))
-            } catch (e: Exception) { }
+            try { repository.updateConversation(conversation.copy(isPinned = !conversation.isPinned)) }
+            catch (e: Exception) { }
         }
     }
 
