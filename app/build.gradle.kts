@@ -19,6 +19,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        
+        // Configurar NDK para llama.cpp
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildTypes {
@@ -62,17 +67,32 @@ android {
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/NOTICE.md"
         }
+        // Para librerías nativas de llama.cpp
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+    
+    // Directorio de librerías nativas
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs")
+        }
     }
 }
 
 dependencies {
-    // Core Android
+    // =============================================
+    // CORE ANDROID
+    // =============================================
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.1")
     implementation("androidx.activity:activity-ktx:1.8.1")
 
-    // Compose BOM
+    // =============================================
+    // COMPOSE
+    // =============================================
     implementation(platform("androidx.compose:compose-bom:2023.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -83,33 +103,69 @@ dependencies {
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.runtime:runtime-livedata")
 
-    // Navigation
+    // =============================================
+    // NAVIGATION
+    // =============================================
     implementation("androidx.navigation:navigation-compose:2.7.5")
 
-    // ViewModel
+    // =============================================
+    // VIEWMODEL
+    // =============================================
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
 
-    // Room
+    // =============================================
+    // ROOM (Base de datos)
+    // =============================================
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // Coroutines
+    // =============================================
+    // COROUTINES
+    // =============================================
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
+    // =============================================
     // JSON
+    // =============================================
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // DataStore
+    // =============================================
+    // DATASTORE (Preferencias)
+    // =============================================
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
-    // Material Design
+    // =============================================
+    // MATERIAL DESIGN
+    // =============================================
     implementation("com.google.android.material:material:1.10.0")
 
-    // Testing
+    // =============================================
+    // 🧠 MOTOR 1: MediaPipe Tasks GenAI (.task)
+    // =============================================
+    implementation("com.google.mediapipe:tasks-genai:0.10.8")
+
+    // =============================================
+    // 🦙 MOTOR 2: llama.cpp - Wrapper Java (.gguf)
+    // =============================================
+    // Opción A: Usar wrapper de terceros (recomendado para empezar)
+    // implementation("com.github.ggerganov:llama.cpp:master-SNAPSHOT")
+    
+    // Opción B: android-llama.cpp (wrapper más ligero)
+    // implementation("com.github.mobile-ai:android-llama:1.0.0")
+    
+    // Opción C: Compilar tu propio .so (máximo control)
+    // Los archivos .so van en:
+    // app/src/main/jniLibs/arm64-v8a/libllama.so
+    // app/src/main/jniLibs/armeabi-v7a/libllama.so
+    // app/src/main/jniLibs/x86_64/libllama.so
+
+    // =============================================
+    // TESTING
+    // =============================================
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

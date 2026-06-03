@@ -57,7 +57,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val database = (application as ThunderAIApp).database
         repository = ConversationRepository(database.conversationDao())
         
+        // Pasar contexto a ChatUseCase
+        chatUseCase.setContext(application)
+        
+        // Cargar preferencias guardadas
         loadPreferences()
+        
+        // Cargar modelo desde almacenamiento
         loadModelFromStorage()
     }
 
@@ -135,7 +141,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         if (!_isModelLoaded.value) {
             val errorMessage = ChatMessage(
-                content = "Error: No hay un modelo cargado. Por favor, selecciona un modelo en la configuracion.",
+                content = "❌ Error: No hay un modelo cargado. Por favor, selecciona un modelo en la configuración.",
                 isUser = false
             )
             _messages.update { it + errorMessage }
@@ -177,7 +183,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 saveCurrentConversation()
             } catch (e: Exception) {
                 val errorMessage = ChatMessage(
-                    content = "Error al generar respuesta: ${e.message}",
+                    content = "❌ Error al generar respuesta: ${e.message}",
                     isUser = false
                 )
                 _messages.update { it + errorMessage }
@@ -215,7 +221,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val currentMessages = _messages.value
         if (currentMessages.isEmpty()) return
 
-        val title = currentMessages.firstOrNull { it.isUser }?.content?.take(30) ?: "Nueva conversacion"
+        val title = currentMessages.firstOrNull { it.isUser }?.content?.take(30) ?: "Nueva conversación"
         val preview = currentMessages.lastOrNull { !it.isUser }?.content?.take(60) ?: ""
 
         val conversation = Conversation(
@@ -234,7 +240,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 currentConversationId = id
             }
         } catch (e: Exception) {
-            // Manejar error
+            // Manejar error de guardado
         }
     }
 
@@ -252,7 +258,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     _isGenerating.value = false
                 }
             } catch (e: Exception) {
-                // Manejar error
+                // Manejar error de carga
             }
         }
     }
@@ -264,7 +270,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val clip = ClipData.newPlainText("message", content)
             clipboard.setPrimaryClip(clip)
         } catch (e: Exception) {
-            // Manejar error
+            // Manejar error de copiado
         }
     }
 
@@ -277,7 +283,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
             context.startActivity(Intent.createChooser(intent, "Compartir mensaje"))
         } catch (e: Exception) {
-            // Manejar error
+            // Manejar error de compartir
         }
     }
 
@@ -325,10 +331,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun getCurrentTemperature(): Float = _temperature.value
+    fun getCurrentMaxTokens(): Int = _maxTokens.value
+    fun isModelReady(): Boolean = _isModelLoaded.value
+
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch {
             saveCurrentConversation()
         }
+        // Liberar modelo al cerrar
+        chatUseCase.unloadModel()
     }
 }
