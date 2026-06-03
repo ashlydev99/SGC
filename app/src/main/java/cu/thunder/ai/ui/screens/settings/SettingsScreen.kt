@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import cu.thunder.ai.domain.model.ModelFormat
 import cu.thunder.ai.ui.screens.chat.ChatViewModel
 import cu.thunder.ai.ui.theme.*
 import cu.thunder.ai.util.ModelLoader
@@ -51,28 +50,14 @@ fun SettingsScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            val fileName = uri.lastPathSegment ?: "model.bin"
-            
-            // Detectar formato por extension
-            val format = when {
-                fileName.endsWith(".task", ignoreCase = true) -> ModelFormat.TASK
-                fileName.endsWith(".gguf", ignoreCase = true) -> ModelFormat.GGUF
-                else -> ModelFormat.UNKNOWN
-            }
-            
-            if (format == ModelFormat.UNKNOWN) {
-                errorMessage = "Formato no soportado. Usa archivos .gguf o .task"
-                return@let
-            }
-            
-            // Copiar modelo y cargarlo
             scope.launch {
                 isLoading = true
                 errorMessage = null
                 try {
                     val result = ModelLoader.loadModel(context, uri)
                     result.onSuccess { modelFile ->
-                        chatViewModel.loadModelFromUri(fileName, format)
+                        val format = ModelLoader.detectFormat(modelFile.name)
+                        chatViewModel.loadModelFromFile(modelFile, format)
                     }.onFailure { e ->
                         errorMessage = "Error al cargar el modelo: ${e.message}"
                     }
@@ -127,7 +112,9 @@ fun SettingsScreen(
             if (errorMessage != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.2f))
+                    colors = CardDefaults.cardColors(
+                        containerColor = ErrorRed.copy(alpha = 0.2f)
+                    )
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -141,7 +128,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = errorMessage!!,
+                            text = errorMessage ?: "",
                             style = MaterialTheme.typography.bodySmall,
                             color = ErrorRed,
                             modifier = Modifier.weight(1f)
@@ -248,7 +235,6 @@ fun SettingsScreen(
                         )
                     }
 
-                    // Indicador de carga
                     if (isLoading) {
                         Spacer(modifier = Modifier.height(12.dp))
                         LinearProgressIndicator(
@@ -263,7 +249,6 @@ fun SettingsScreen(
                         )
                     }
 
-                    // Ruta del modelo
                     if (modelPath != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(

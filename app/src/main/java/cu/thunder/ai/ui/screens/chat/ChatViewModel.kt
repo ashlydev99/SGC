@@ -14,6 +14,7 @@ import cu.thunder.ai.data.repository.ConversationRepository
 import cu.thunder.ai.domain.model.ChatMessage
 import cu.thunder.ai.domain.model.ModelFormat
 import cu.thunder.ai.domain.usecase.ChatUseCase
+import cu.thunder.ai.util.ModelLoader
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
@@ -67,9 +68,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _modelPath.value = prefs.getString("model_path", null)
     }
 
-    /**
-     * Carga el modelo guardado al iniciar la app
-     */
     private fun loadModelFromStorage() {
         val savedPath = _modelPath.value ?: return
         
@@ -77,10 +75,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val modelFile = File(getApplication<Application>().filesDir, "models/$savedPath")
                 if (modelFile.exists()) {
-                    val format = if (savedPath.endsWith(".task")) ModelFormat.TASK 
-                                else if (savedPath.endsWith(".gguf")) ModelFormat.GGUF 
-                                else ModelFormat.UNKNOWN
-                    
+                    val format = ModelLoader.detectFormat(modelFile.name)
                     val success = chatUseCase.loadModel(modelFile.absolutePath, format)
                     _isModelLoaded.value = success
                     
@@ -89,7 +84,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         prefs.edit().remove("model_path").apply()
                     }
                 } else {
-                    // El archivo no existe, limpiar preferencia
                     _modelPath.value = null
                     prefs.edit().remove("model_path").apply()
                 }
@@ -123,17 +117,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Carga el modelo desde una URI (cuando el usuario selecciona un archivo)
-     */
-    fun loadModelFromUri(path: String, format: ModelFormat) {
-        updateModelPath(path)
+    fun loadModelFromFile(modelFile: File, format: ModelFormat) {
+        val fileName = modelFile.name
+        updateModelPath(fileName)
+        
         viewModelScope.launch {
             try {
-                val modelFile = File(getApplication<Application>().filesDir, "models/$path")
-                if (modelFile.exists()) {
-                    _isModelLoaded.value = chatUseCase.loadModel(modelFile.absolutePath, format)
-                }
+                _isModelLoaded.value = chatUseCase.loadModel(modelFile.absolutePath, format)
             } catch (e: Exception) {
                 _isModelLoaded.value = false
             }
@@ -208,14 +198,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun newConversation() {
-        // Guardar conversacion actual
         if (_messages.value.isNotEmpty()) {
             viewModelScope.launch {
                 saveCurrentConversation()
             }
         }
         
-        // Limpiar TODO inmediatamente
         _messages.value = emptyList()
         _isWelcomeScreen.value = true
         currentConversationId = null
@@ -254,7 +242,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 repository.getConversationById(conversationId)?.let { conversation ->
-                    // Guardar actual antes de cargar otra
                     if (_messages.value.isNotEmpty()) {
                         saveCurrentConversation()
                     }
